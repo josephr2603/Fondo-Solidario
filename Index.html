@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Fondo Solidario — Transparencia</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,sans-serif;background:#fdf8f2;color:#1f2937;font-size:15px;min-height:100vh}
+
+/* ── PANTALLA DE LOGIN ── */
+#loginScreen{position:fixed;inset:0;background:#0f1f33;display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px}
+.login-box{background:#1a2e4a;border-radius:20px;padding:32px 28px;width:100%;max-width:360px;text-align:center}
+.login-box h2{color:white;font-size:22px;font-weight:900;margin-bottom:6px}
+.login-box p{color:#9ca3af;font-size:14px;margin-bottom:24px;line-height:1.5}
+.pass-hint{background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.4);border-radius:10px;padding:12px;margin-bottom:18px}
+.pass-hint p{color:#fbbf24;font-size:13px;margin:0}
+.pass-hint strong{font-size:20px;letter-spacing:4px;display:block;margin-top:4px;color:white}
+.login-inp{width:100%;padding:14px;border-radius:10px;border:2px solid #283d5e;background:#0f1f33;color:white;font-size:18px;text-align:center;letter-spacing:4px;margin-bottom:12px;outline:none}
+.login-inp:focus{border-color:#f59e0b}
+.login-btn{width:100%;padding:14px;background:#f59e0b;color:#0f1f33;border:none;border-radius:10px;font-size:16px;font-weight:900;cursor:pointer}
+.login-btn:hover{background:#d97706}
+.login-err{background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:10px;color:#dc2626;font-size:13px;font-weight:700;margin-top:12px;display:none}
+.show-pass{background:none;border:none;color:#6b7280;font-size:12px;cursor:pointer;margin-top:8px;text-decoration:underline;display:block;width:100%;text-align:center}
+
+/* ── APP ── */
+#app{display:none}
+
+/* BANNER */
+#banner{background:linear-gradient(90deg,#7f1d1d,#991b1b);color:#fff;text-align:center;padding:9px 16px;font-size:13px;font-weight:700;line-height:1.4}
+
+/* HEADER */
+header{background:linear-gradient(135deg,#0f1f33,#1a2e4a 60%,#1e3a6e);color:#fff;position:sticky;top:0;z-index:100;box-shadow:0 3px 20px rgba(0,0,0,.25)}
+.hinner{max-width:1080px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.hlogo{display:flex;align-items:center;gap:10px}
+.hico{width:36px;height:36px;background:#f59e0b;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.hname{font-size:15px;font-weight:800}
+.hsub{font-size:11px;opacity:.65}
+.hnav{display:flex;gap:4px;align-items:center;flex-wrap:wrap}
+.ntab{padding:6px 12px;border-radius:8px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:transparent;color:rgba(255,255,255,.75);transition:all .15s;white-space:nowrap}
+.ntab.on,.ntab:hover{background:rgba(255,255,255,.2);color:#fff}
+.admin-btn{padding:6px 12px;border-radius:8px;border:1px solid rgba(255,255,255,.3);cursor:pointer;font-size:12px;background:transparent;color:rgba(255,255,255,.9);white-space:nowrap}
+.admin-badge{background:#f59e0b;color:#0f1f33;font-size:10px;font-weight:900;padding:1px 7px;border-radius:10px;margin-left:6px}
+
+/* MAIN */
+main{max-width:1080px;margin:0 auto;padding:16px}
+
+/* ADMIN TOOLBAR */
+#toolbar{background:#fffbeb;border:1px solid #fde68a;border-radius:12px;padding:12px 16px;margin-bottom:14px;display:none}
+.toolbar-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.toolbar-label{font-size:13px;font-weight:700;color:#92400e}
+.toolbar-btns{display:flex;gap:7px;flex-wrap:wrap}
+.abtn{padding:8px 14px;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-size:13px;color:#fff;white-space:nowrap}
+.abtn:hover{opacity:.85}
+.abtn:disabled{opacity:.5;cursor:not-allowed}
+.g{background:#10b981}.b{background:#3b82f6}.p{background:#7c3aed}.gr{background:#6b7280}
+
+/* STATUS */
+#status{border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:13px;font-weight:600;display:none}
+#status.ok{background:#ecfdf5;border:1px solid #6ee7b7;color:#065f46}
+#status.err{background:#fef2f2;border:1px solid #fecaca;color:#991b1b}
+#status.info{background:#eff6ff;border:1px solid #bfdbfe;color:#1e40af}
+
+/* TABS */
+.view{display:none}.view.on{display:block}
+
+/* SUMMARY CARDS */
+#cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:14px}
+.card-s{background:#fff;border-radius:14px;padding:18px;box-shadow:0 2px 10px rgba(0,0,0,.07);border-left:4px solid}
+.card-icon{font-size:22px;margin-bottom:5px}
+.card-lbl{font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px}
+.card-val{font-size:22px;font-weight:900;letter-spacing:-.5px}
+.card-sub{font-size:11px;color:#9ca3af;margin-top:2px}
+
+/* GENERIC CARD */
+.card{background:#fff;border-radius:14px;padding:20px;box-shadow:0 2px 10px rgba(0,0,0,.07);margin-bottom:14px}
+.ctit{font-size:11px;font-weight:800;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;margin-bottom:14px}
+
+/* PROGRESS */
+.prog-wrap{height:20px;background:#e5e7eb;border-radius:100px;overflow:hidden}
+.prog-fill{height:100%;background:linear-gradient(90deg,#10b981,#f59e0b);border-radius:100px;transition:width .6s}
+
+/* IMPACT GRID */
+#igrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+.ic{border-radius:12px;padding:14px;text-align:center;border:1px solid #f3f4f6;background:#fff;border-top:4px solid;box-shadow:0 2px 8px rgba(0,0,0,.05)}
+.ic-em{font-size:26px;margin-bottom:5px;display:block}
+.ic-val{font-size:14px;font-weight:900;margin-bottom:2px}
+.ic-lbl{font-size:11px;font-weight:700;color:#4b5563}
+.ic-pct{font-size:10px;color:#9ca3af;margin-top:2px}
+.ic-bar{height:4px;background:#f3f4f6;border-radius:4px;margin-top:5px;overflow:hidden}
+.ic-bar-f{height:100%;border-radius:4px}
+
+/* CHARTS */
+#charts-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:600px){#charts-row{grid-template-columns:1fr}#igrid{grid-template-columns:repeat(2,1fr)}#cards{grid-template-columns:1fr 1fr}}
+
+/* TX LIST */
+.tx-item{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid #f5f0e8}
+.tx-item:last-child{border-bottom:none}
+.tx-icon{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.tx-body{flex:1;min-width:0}
+.tx-name{font-weight:700;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tx-meta{font-size:11px;color:#9ca3af;margin-top:2px}
+.tx-badge{display:inline-block;background:#f3f4f6;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:600;color:#6b7280;margin-left:4px}
+.tx-right{text-align:right;flex-shrink:0}
+.tx-amt{font-weight:800;font-size:14px}
+.tx-type{font-size:10px;color:#9ca3af}
+.tx-del{background:none;border:none;color:#dc2626;cursor:pointer;font-size:14px;opacity:.3;padding:3px;flex-shrink:0}
+.tx-del:hover{opacity:1}
+.empty{text-align:center;padding:40px;color:#9ca3af}
+.empty .eico{font-size:40px;margin-bottom:10px}
+
+/* FILTER */
+.filter-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.filter-row select{padding:8px 12px;border-radius:8px;border:1px solid #e5e7eb;font-size:13px;background:#fff;cursor:pointer}
+
+/* MODAL */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:500;padding:16px}
+.overlay.on{display:flex}
+.modal{background:#fff;border-radius:20px;padding:24px;width:100%;max-width:460px;position:relative;box-shadow:0 24px 64px rgba(0,0,0,.2);max-height:90vh;overflow-y:auto}
+.modal h2{font-size:17px;font-weight:900;color:#0f1f33;margin-bottom:18px}
+.mcls{position:absolute;top:14px;right:14px;background:#f3f4f6;border:none;border-radius:8px;width:30px;height:30px;cursor:pointer;font-size:15px;color:#6b7280}
+.field{margin-bottom:12px}
+.field label{font-size:12px;font-weight:700;color:#4b5563;display:block;margin-bottom:4px}
+.field input,.field select,.field textarea{width:100%;padding:10px 12px;border-radius:8px;border:1px solid #e5e7eb;font-size:14px;font-family:inherit;outline:none;transition:border-color .15s;background:#fff;color:#1f2937}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:#f59e0b;box-shadow:0 0 0 3px rgba(245,158,11,.12)}
+.field textarea{resize:vertical}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mrow{display:flex;gap:8px;margin-top:8px}
+.mbtn{flex:1;padding:12px;border:none;border-radius:10px;cursor:pointer;font-weight:800;font-size:14px;color:#fff}
+.mcan{flex:1;padding:12px;border:none;border-radius:10px;cursor:pointer;font-size:14px;background:#f3f4f6;color:#6b7280;font-weight:600}
+.req{color:#dc2626}
+.ai-hint{background:#ecfdf5;border:1px solid #6ee7b7;border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:13px;color:#065f46;font-weight:600;display:none}
+
+/* PUBLISH TAB */
+.pub-hero{background:linear-gradient(135deg,#0f1f33,#1a2e4a);border-radius:16px;padding:24px;color:white;margin-bottom:14px;text-align:center}
+.pub-hero h2{font-size:20px;font-weight:900;margin-bottom:8px}
+.pub-hero p{font-size:14px;opacity:.75;margin-bottom:20px;line-height:1.6}
+.pub-btn{background:#f59e0b;color:#0f1f33;border:none;border-radius:12px;padding:14px 28px;font-size:16px;font-weight:900;cursor:pointer;display:inline-block}
+.pub-btn:hover{background:#d97706}
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:14px}
+.step{background:#fff;border-radius:12px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.step-n{font-size:24px;font-weight:900;color:#f59e0b;margin-bottom:6px}
+.step-t{font-size:14px;font-weight:700;margin-bottom:4px}
+.step-s{font-size:12px;color:#6b7280;line-height:1.5}
+
+/* DESIGN TAB */
+.dtabs{display:flex;gap:6px;margin-bottom:18px;flex-wrap:wrap}
+.dtab{padding:8px 14px;border-radius:8px;border:2px solid #e5e7eb;cursor:pointer;font-size:13px;font-weight:600;background:#fff;color:#4b5563;transition:all .15s}
+.dtab.on{background:#0f1f33;color:#fff;border-color:#0f1f33}
+.dpanel{display:none}.dpanel.on{display:block}
+.crow{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid #f3f4f6;gap:10px}
+.crow label{font-size:13px;font-weight:600;color:#1f2937;flex:1}
+.crow small{font-size:11px;color:#9ca3af;display:block;margin-top:2px}
+input[type=color]{width:44px;height:34px;border:2px solid #e5e7eb;border-radius:8px;cursor:pointer;padding:2px;flex-shrink:0}
+.themes{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:14px 0}
+.theme-btn{border:none;border-radius:10px;padding:10px 4px;cursor:pointer;color:white;font-size:13px;font-weight:700;text-align:center;line-height:1.3;transition:transform .15s}
+.theme-btn:hover{transform:translateY(-2px)}
+.erow{display:grid;grid-template-columns:repeat(8,1fr);gap:5px;margin:8px 0}
+.emo{background:#f9fafb;border:2px solid transparent;border-radius:8px;padding:5px;font-size:18px;cursor:pointer;text-align:center}
+.emo.on,.emo:hover{border-color:#f59e0b;background:#fffbeb}
+.trow{display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid #f3f4f6}
+.trow label{font-size:14px;color:#1f2937;flex:1;cursor:pointer}
+.toggle{position:relative;width:46px;height:26px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0;position:absolute}
+.tslide{position:absolute;cursor:pointer;inset:0;background:#d1d5db;border-radius:13px;transition:.25s}
+.tslide:before{content:"";position:absolute;width:20px;height:20px;left:3px;bottom:3px;background:white;border-radius:50%;transition:.25s;box-shadow:0 1px 4px rgba(0,0,0,.2)}
+.toggle input:checked+.tslide{background:#f59e0b}
+.toggle input:checked+.tslide:before{transform:translateX(20px)}
+
+/* PREVIEW MINI */
+.prev{border:2px solid #e5e7eb;border-radius:12px;overflow:hidden;margin-top:14px}
+.prev-hdr{padding:10px 14px;display:flex;align-items:center;gap:8px}
+.prev-logo{width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:14px;background:#f59e0b}
+.prev-title{font-size:13px;font-weight:800;color:white}
+.prev-bar{height:5px;background:#f59e0b}
+.prev-cards{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:8px}
+.prev-c{background:#fff;border-radius:8px;padding:8px 10px;border-left:3px solid #f59e0b}
+.prev-cv{font-size:14px;font-weight:900;color:#059669}
+.prev-cl{font-size:9px;color:#9ca3af;text-transform:uppercase;font-weight:700}
+
+/* DOC ITEM */
+.doc-item{display:flex;align-items:flex-start;gap:10px;padding:13px;border-radius:10px;background:#f9fafb;margin-bottom:8px;border:1px solid #f3f4f6}
+.doc-note{font-size:12px;color:#4b5563;background:#fff;padding:5px 9px;border-radius:6px;border:1px solid #e5e7eb;margin-top:4px}
+
+/* UPLOAD ZONE */
+.upload-zone{border:2px dashed #93c5fd;border-radius:12px;padding:36px;text-align:center;cursor:pointer;background:#eff6ff;margin-bottom:16px;transition:background .15s}
+.upload-zone:hover{background:#dbeafe}
+
+footer{text-align:center;padding:24px;font-size:12px;color:#9ca3af;border-top:1px solid #f3f4f6}
+
+@media(max-width:520px){.fgrid{grid-template-columns:1fr}.toolbar-btns{display:grid;grid-template-columns:1fr 1fr;width:100%}.abtn{text-align:center}}
+</style>
+</head>
+<body>
+
+<!-- ═══ LOGIN ═══ -->
+<div id="loginScreen">
+  <div class="login-box">
+    <div style="font-size:48px;margin-bottom:12px">🏚️</div>
+    <h2>Fondo Solidario</h2>
+    <p>Acceso exclusivo para administradores</p>
+    <div class="pass-hint">
+      <p>Tu contraseña de acceso:</p>
+      <strong id="showPassLabel">••••</strong>
+    </div>
+    <input class="login-inp" type="password" id="loginInput" placeholder="Escribe aquí" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+    <button class="login-btn" onclick="doLogin()">Entrar →</button>
+    <div class="login-err" id="loginErr">❌ Contraseña incorrecta. Mira arriba.</div>
+    <button class="show-pass" onclick="toggleShowPass()">👁 Mostrar / ocultar contraseña</button>
+  </div>
+</div>
+
+<!-- ═══ APP ═══ -->
+<div id="app">
+  <div id="banner">🚨 EMERGENCIA ACTIVA · <span id="bannerTxt">Ayuda a las víctimas del terremoto. Cada euro cuenta.</span></div>
+  <header>
+    <div class="hinner">
+      <div class="hlogo">
+        <div class="hico" id="hico">🏚️</div>
+        <div><div class="hname" id="hname">Fondo Solidario Terremoto</div><div class="hsub" id="hsub">Transparencia total</div></div>
+      </div>
+      <div class="hnav">
+        <button class="ntab on" onclick="goTab('dash')">📊 Inicio</button>
+        <button class="ntab" onclick="goTab('txs')">📋 Registro</button>
+        <button class="ntab" onclick="goTab('docs')">📁 Docs</button>
+        <button class="ntab" onclick="goTab('design')">🎨 Diseño</button>
+        <button class="ntab" onclick="goTab('pub')">🌐 Publicar</button>
+        <button class="admin-btn" onclick="doLogout()">Salir</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div id="toolbar">
+      <div class="toolbar-row">
+        <span class="toolbar-label">🔧 ADMIN <span class="admin-badge">ACTIVO</span></span>
+        <div class="toolbar-btns">
+          <button class="abtn g" onclick="openAddModal()">+ Añadir</button>
+          <button class="abtn b" id="aiBtn" onclick="document.getElementById('fileInput').click()">📎 Subir (IA)</button>
+          <button class="abtn gr" onclick="exportCSV()">⬇️ CSV</button>
+          <button class="abtn p" onclick="goTab('design')">🎨 Diseño</button>
+          <button class="abtn gr" onclick="openSettings()">⚙️ Ajustes</button>
+          <input type="file" id="fileInput" accept="image/*,.csv" style="display:none" onchange="handleFile(event)"/>
+        </div>
+      </div>
+    </div>
+    <div id="status"></div>
+
+    <!-- INICIO -->
+    <div id="v-dash" class="view on">
+      <div id="cards"></div>
+      <div class="card" id="progCard" style="display:none">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px">
+          <span style="font-weight:800">🎯 Progreso de recaudación</span>
+          <span id="progPct" style="font-weight:900;color:#d97706">0%</span>
+        </div>
+        <div class="prog-wrap"><div class="prog-fill" id="progFill" style="width:0%"></div></div>
+        <div style="margin-top:8px;font-size:12px;color:#9ca3af;display:flex;gap:14px;flex-wrap:wrap">
+          <span>Recaudado: <strong id="pInc">-</strong></span>
+          <span>Objetivo: <strong id="pGoal">-</strong></span>
+          <span>Restante: <strong id="pRem">-</strong></span>
+        </div>
+      </div>
+      <div class="card"><div class="ctit">❤️ En qué se ha invertido vuestra ayuda</div><div id="noImpact" class="empty" style="padding:20px"><div class="eico">🙏</div><p>Añade gastos con categoría para ver el desglose</p></div><div id="igrid"></div></div>
+      <div id="charts-row"><div class="card" id="barCard"><div class="ctit">📈 Evolución mensual</div><canvas id="barChart" height="190"></canvas></div><div class="card" id="pieCard"><div class="ctit">🍩 Distribución</div><canvas id="pieChart" height="190"></canvas></div></div>
+      <div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><div class="ctit" style="margin:0">🕐 Últimos movimientos</div><button style="background:none;border:none;color:#1d4ed8;cursor:pointer;font-size:13px;font-weight:600" onclick="goTab('txs')">Ver todos →</button></div><div id="recentList"></div></div>
+    </div>
+
+    <!-- REGISTRO -->
+    <div id="v-txs" class="view">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px">
+          <div class="ctit" style="margin:0">📋 Todos los movimientos</div>
+          <div class="filter-row" style="margin:0">
+            <select id="filterType" onchange="renderTxList()"><option value="all">Todos</option><option value="income">💚 Donaciones</option><option value="expense">🤝 Gastos</option></select>
+            <select id="filterCat" onchange="renderTxList()"><option value="all">Todas las categorías</option></select>
+          </div>
+        </div>
+        <div id="txSum" style="display:none;background:#f9fafb;border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:13px"></div>
+        <div id="txList"></div>
+      </div>
+    </div>
+
+    <!-- DOCUMENTOS -->
+    <div id="v-docs" class="view">
+      <div class="card">
+        <div class="ctit">📁 Documentos y justificantes</div>
+        <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
+          <div style="font-size:36px;margin-bottom:8px">📎</div>
+          <div style="font-size:15px;font-weight:800;color:#1e40af;margin-bottom:4px" id="dzt">Subir recibo, factura o CSV</div>
+          <div style="font-size:12px;color:#9ca3af">JPG · PNG · CSV — La IA extrae los datos automáticamente</div>
+        </div>
+        <div class="ctit" style="margin-bottom:10px">Movimientos con justificante</div>
+        <div id="docList"></div>
+      </div>
+    </div>
+
+    <!-- DISEÑO -->
+    <div id="v-design" class="view">
+      <div style="display:grid;grid-template-columns:1fr 340px;gap:14px;align-items:start">
+        <div class="card">
+          <div class="ctit">🎨 Personalizar diseño y contenido</div>
+          <div class="dtabs">
+            <button class="dtab on" onclick="dTab('contenido')">📝 Contenido</button>
+            <button class="dtab" onclick="dTab('colores')">🎨 Colores</button>
+            <button class="dtab" onclick="dTab('donacion')">💳 Donaciones</button>
+            <button class="dtab" onclick="dTab('secciones')">👁 Secciones</button>
+          </div>
+
+          <div id="dp-contenido" class="dpanel on">
+            <div class="field"><label>Icono / Logo</label><div class="erow" id="emoGrid"></div></div>
+            <div class="field"><label>Nombre del proyecto</label><input id="dN" oninput="livePreview()"/></div>
+            <div class="field"><label>Descripción</label><input id="dD" oninput="livePreview()"/></div>
+            <div class="field"><label>Texto del banner de emergencia</label><input id="dBan"/></div>
+            <div class="field"><label>Texto "Sobre nosotros" <small style="font-weight:400;color:#9ca3af">(aparece en la página pública)</small></label><textarea id="dAb" rows="4" placeholder="Explica quiénes sois, qué hacéis y por qué podéis confiar en el fondo..."></textarea></div>
+            <div class="field"><label>Pie de página</label><input id="dFt" placeholder="Datos verificados por el equipo coordinador"/></div>
+          </div>
+
+          <div id="dp-colores" class="dpanel">
+            <div style="font-size:13px;font-weight:600;color:#4b5563;margin-bottom:10px">Temas prediseñados:</div>
+            <div class="themes">
+              <button class="theme-btn" style="background:linear-gradient(135deg,#0f1f33,#1e3a6e)" onclick="applyTheme('#f59e0b','#0f1f33','#1e3a6e','#fdf8f2')">🌟<br>Ámbar</button>
+              <button class="theme-btn" style="background:linear-gradient(135deg,#1e3a8a,#2563eb)" onclick="applyTheme('#3b82f6','#1e3a8a','#2563eb','#f0f6ff')">💙<br>Azul</button>
+              <button class="theme-btn" style="background:linear-gradient(135deg,#064e3b,#065f46)" onclick="applyTheme('#10b981','#064e3b','#065f46','#f0fdf4')">💚<br>Verde</button>
+              <button class="theme-btn" style="background:linear-gradient(135deg,#7f1d1d,#991b1b)" onclick="applyTheme('#ef4444','#7f1d1d','#991b1b','#fff5f5')">❤️<br>Rojo</button>
+            </div>
+            <div style="font-size:13px;font-weight:600;color:#4b5563;margin:14px 0 8px">Personalizar:</div>
+            <div class="crow"><div><label>Color de acento <small>Botones, barras, destacados</small></label></div><input type="color" id="cAcc" oninput="applyColors()"/></div>
+            <div class="crow"><div><label>Cabecera inicio <small>Gradiente izquierda</small></label></div><input type="color" id="cH1" oninput="applyColors()"/></div>
+            <div class="crow"><div><label>Cabecera fin <small>Gradiente derecha</small></label></div><input type="color" id="cH2" oninput="applyColors()"/></div>
+            <div class="crow"><div><label>Fondo de la página</label></div><input type="color" id="cBg" oninput="applyColors()"/></div>
+          </div>
+
+          <div id="dp-donacion" class="dpanel">
+            <div style="background:#ecfdf5;border:1px solid #6ee7b7;border-radius:10px;padding:12px;margin-bottom:14px;font-size:13px;color:#065f46">💡 Esta información aparecerá en la página pública para que los donantes sepan cómo ayudar.</div>
+            <div class="field"><label>IBAN / Cuenta bancaria</label><input id="dIBAN" placeholder="ES91 2100 0418 45..."/></div>
+            <div class="field"><label>Titular de la cuenta</label><input id="dTit" placeholder="Nombre completo"/></div>
+            <div class="field"><label>Número de Bizum</label><input id="dBiz" placeholder="6XX XXX XXX"/></div>
+            <div class="field"><label>PayPal</label><input id="dPP" placeholder="paypal.me/... o email@..."/></div>
+            <div class="field"><label>Concepto de pago</label><input id="dCon" placeholder="DONACION TERREMOTO"/></div>
+            <div class="field"><label>Email de contacto</label><input id="dEm" type="email"/></div>
+            <div class="field"><label>WhatsApp</label><input id="dWA" placeholder="6XX XXX XXX"/></div>
+          </div>
+
+          <div id="dp-secciones" class="dpanel">
+            <div style="font-size:13px;color:#6b7280;margin-bottom:12px">Activa o desactiva lo que verá el público:</div>
+            <div class="trow"><label for="sBan">🚨 Banner de emergencia (franja roja)</label><label class="toggle"><input type="checkbox" id="sBan" checked><div class="tslide"></div></label></div>
+            <div class="trow"><label for="sProg">🎯 Barra de progreso hacia el objetivo</label><label class="toggle"><input type="checkbox" id="sProg" checked><div class="tslide"></div></label></div>
+            <div class="trow"><label for="sAb">📖 Sección "Sobre nosotros"</label><label class="toggle"><input type="checkbox" id="sAb"><div class="tslide"></div></label></div>
+            <div class="trow"><label for="sDon">💳 Cómo donar (info de pago)</label><label class="toggle"><input type="checkbox" id="sDon" checked><div class="tslide"></div></label></div>
+            <div class="trow"><label for="sImp">❤️ Desglose de ayuda por categoría</label><label class="toggle"><input type="checkbox" id="sImp" checked><div class="tslide"></div></label></div>
+            <div class="trow"><label for="sCha">📈 Gráficos de evolución</label><label class="toggle"><input type="checkbox" id="sCha" checked><div class="tslide"></div></label></div>
+            <div class="trow"><label for="sTx">📋 Lista completa de movimientos</label><label class="toggle"><input type="checkbox" id="sTx" checked><div class="tslide"></div></label></div>
+          </div>
+
+          <div style="margin-top:18px;display:flex;gap:8px">
+            <button class="mbtn g" style="flex:2" onclick="saveDesign()">💾 Guardar diseño</button>
+            <button class="mcan" onclick="if(confirm('¿Restablecer diseño por defecto?'))resetDesign()">Reset</button>
+          </div>
+        </div>
+        <!-- PREVIEW -->
+        <div style="position:sticky;top:110px">
+          <div class="card">
+            <div class="ctit">Vista previa en tiempo real</div>
+            <div class="prev" id="prevBox">
+              <div id="pBan" style="background:linear-gradient(90deg,#7f1d1d,#991b1b);color:#fff;text-align:center;padding:7px;font-size:11px;font-weight:700">🚨 EMERGENCIA ACTIVA</div>
+              <div id="pHdr" class="prev-hdr" style="background:linear-gradient(135deg,#0f1f33,#1e3a6e)"><div class="prev-logo" id="pLogo">🏚️</div><div class="prev-title" id="pTitle">Fondo Solidario</div></div>
+              <div id="pBar" class="prev-bar"></div>
+              <div class="prev-cards">
+                <div class="prev-c" id="pC1"><div class="prev-cv" id="pInc2" style="color:#059669">0,00 €</div><div class="prev-cl">Recaudado</div></div>
+                <div class="prev-c" id="pC2"><div class="prev-cv" id="pExp2" style="color:#d97706">0,00 €</div><div class="prev-cl">Distribuido</div></div>
+                <div class="prev-c" id="pC3"><div class="prev-cv" id="pBal2" style="color:#0891b2">0,00 €</div><div class="prev-cl">Disponible</div></div>
+                <div class="prev-c" id="pC4"><div class="prev-cv" id="pCnt2" style="color:#7c3aed">0</div><div class="prev-cl">Movimientos</div></div>
+              </div>
+              <div id="pDon" style="display:none;margin:8px;background:#1a2e4a;border-radius:8px;padding:10px 12px">
+                <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.6);margin-bottom:6px">💳 CÓMO DONAR</div>
+                <div id="pDonItems"></div>
+              </div>
+            </div>
+            <div style="margin-top:10px;font-size:11px;color:#9ca3af;text-align:center;line-height:1.5">Guarda y ve a 🌐 Publicar para generar la página</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PUBLICAR -->
+    <div id="v-pub" class="view">
+      <div class="pub-hero">
+        <h2>🌐 Publicar tu página</h2>
+        <p>Genera la página pública con todos tus datos y diseño. Luego súbela a cualquiera de estas plataformas gratuitas para obtener un enlace que puedes compartir con todo el mundo.</p>
+        <button class="pub-btn" onclick="generatePage()">📥 Generar página pública</button>
+      </div>
+      <div class="steps">
+        <div class="step"><div class="step-n">1</div><div class="step-t">Genera la página</div><div class="step-s">Pulsa el botón de arriba → se descarga un archivo .html</div></div>
+        <div class="step"><div class="step-n">2</div><div class="step-t">Elige dónde publicar</div><div class="step-s">Opciones gratuitas abajo ↓</div></div>
+        <div class="step"><div class="step-n">3</div><div class="step-t">Sube el archivo</div><div class="step-s">Arrastra el .html a la plataforma elegida</div></div>
+        <div class="step"><div class="step-n">4</div><div class="step-t">Comparte el enlace</div><div class="step-s">Cualquier persona lo abre sin contraseña</div></div>
+      </div>
+      <div class="card">
+        <div class="ctit">🚀 Opciones de publicación gratuita</div>
+        <div style="display:grid;gap:12px">
+          <div style="border:2px solid #fde68a;border-radius:12px;padding:16px;background:#fffbeb">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><span style="font-size:24px">⚡</span><div><div style="font-weight:800;font-size:15px">Netlify Drop — Más fácil</div><div style="font-size:12px;color:#6b7280">Sin cuenta · Enlace en 30 segundos</div></div></div>
+            <ol style="padding-left:18px;font-size:13px;color:#4b5563;line-height:2">
+              <li>Abre <strong><a href="https://app.netlify.com/drop" target="_blank" style="color:#f59e0b">app.netlify.com/drop</a></strong> en tu ordenador (no en móvil)</li>
+              <li>Arrastra el archivo descargado a la zona azul</li>
+              <li>¡Listo! Tienes tu enlace: <code>algo.netlify.app</code></li>
+            </ol>
+            <div style="background:#fef9c3;border-radius:8px;padding:8px 12px;font-size:12px;color:#92400e;margin-top:8px">💡 Para que el enlace no cambie, créate una cuenta gratis en Netlify</div>
+          </div>
+          <div style="border:2px solid #bfdbfe;border-radius:12px;padding:16px;background:#eff6ff">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><span style="font-size:24px">🐛</span><div><div style="font-weight:800;font-size:15px">Glitch.com — Enlace permanente gratis</div><div style="font-size:12px;color:#6b7280">Requiere cuenta (gratis con Google)</div></div></div>
+            <ol style="padding-left:18px;font-size:13px;color:#4b5563;line-height:2">
+              <li>Ve a <strong><a href="https://glitch.com" target="_blank" style="color:#3b82f6">glitch.com</a></strong> → "Sign in with Google"</li>
+              <li>Clic en "+ New Project" → "glitch-hello-website"</li>
+              <li>En el panel izquierdo, abre <code>index.html</code></li>
+              <li>Borra todo el contenido y pega el HTML de tu archivo generado</li>
+              <li>Tu URL es: <code>tu-proyecto.glitch.me</code></li>
+            </ol>
+          </div>
+          <div style="border:2px solid #bbf7d0;border-radius:12px;padding:16px;background:#f0fdf4">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><span style="font-size:24px">🐱</span><div><div style="font-weight:800;font-size:15px">GitHub Pages — Más profesional</div><div style="font-size:12px;color:#6b7280">Requiere cuenta GitHub (gratis)</div></div></div>
+            <ol style="padding-left:18px;font-size:13px;color:#4b5563;line-height:2">
+              <li>Ve a <strong><a href="https://github.com" target="_blank" style="color:#059669">github.com</a></strong> → crea cuenta gratis</li>
+              <li>"New repository" → ponle nombre (ej: fondo-solidario) → público</li>
+              <li>Sube el archivo renombrado como <code>index.html</code></li>
+              <li>Settings → Pages → Branch: main → Save</li>
+              <li>Tu URL: <code>tu-usuario.github.io/fondo-solidario</code></li>
+            </ol>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+  <footer id="footerEl">Datos verificados por el equipo coordinador · Transparencia total</footer>
+</div>
+
+<!-- MODAL AÑADIR -->
+<div class="overlay" id="addModal">
+  <div class="modal">
+    <button class="mcls" onclick="closeModal('addModal')">✕</button>
+    <h2>➕ Registrar movimiento</h2>
+    <div class="ai-hint" id="aiHint"></div>
+    <div class="fgrid">
+      <div class="field"><label>Tipo <span class="req">*</span></label>
+        <select id="fType" onchange="updateCats()">
+          <option value="expense">🤝 Ayuda distribuida</option>
+          <option value="income">💚 Donación recibida</option>
+        </select>
+      </div>
+      <div class="field"><label>Fecha <span class="req">*</span></label><input type="date" id="fDate"/></div>
+    </div>
+    <div class="field"><label>Descripción <span class="req">*</span></label><input id="fDesc" placeholder="¿Qué se compró o quién donó?"/></div>
+    <div class="fgrid">
+      <div class="field"><label>Importe € <span class="req">*</span></label><input type="number" id="fAmt" min="0" step="0.01" placeholder="0.00"/></div>
+      <div class="field"><label>Categoría</label><select id="fCat"></select></div>
+    </div>
+    <div class="field"><label>Personas beneficiadas</label><input id="fBen" placeholder="Ej: 50 familias, 200 personas..."/></div>
+    <div class="field"><label>Notas</label><textarea id="fNotes" rows="2" placeholder="Proveedor, zona, referencia..."></textarea></div>
+    <div class="mrow">
+      <button class="mbtn" style="background:#10b981" onclick="saveTx()">💾 Guardar</button>
+      <button class="mcan" onclick="closeModal('addModal')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+//  CONTRASEÑA — cámbiala aquí si quieres
+let PASS = "1234";
+// ══════════════════════════════════════════
+
+// ─── CATEGORÍAS
+const EC=["🍞 Alimentación general","💧 Agua potable","🥛 Bebidas e hidratación","👶 Insumos para niños (pañales, leche...)","💊 Medicamentos y botiquín","🏥 Atención médica y curas","🧴 Higiene y saneamiento","🛏️ Ropa, abrigo y cobijo","🔦 Material de emergencia","🚚 Transporte y logística","📦 Almacenamiento","📢 Comunicación","⚙️ Gastos operativos"];
+const IC=["💝 Donación personal","🏢 Donación empresa","🎪 Evento solidario","🏛️ Apoyo institucional","💳 Transferencia bancaria","💰 Colecta en efectivo","🌐 Donación online","💙 Otro ingreso"];
+const IMPS=[
+  {ic:"🍞",lb:"Nutrición",cl:"#f59e0b",cats:["🍞 Alimentación general","💧 Agua potable","🥛 Bebidas e hidratación"]},
+  {ic:"👶",lb:"Para niños",cl:"#ec4899",cats:["👶 Insumos para niños (pañales, leche...)"]},
+  {ic:"💊",lb:"Salud",cl:"#10b981",cats:["💊 Medicamentos y botiquín","🏥 Atención médica y curas"]},
+  {ic:"🧴",lb:"Higiene",cl:"#06b6d4",cats:["🧴 Higiene y saneamiento"]},
+  {ic:"🛏️",lb:"Cobijo",cl:"#8b5cf6",cats:["🛏️ Ropa, abrigo y cobijo"]},
+  {ic:"🚚",lb:"Logística",cl:"#64748b",cats:["🔦 Material de emergencia","🚚 Transporte y logística","📦 Almacenamiento","📢 Comunicación","⚙️ Gastos operativos"]}
+];
+const EMOJIS=["🏚️","🏠","🌍","🙏","❤️","💪","🤝","⭐","🌟","🚑","🏥","💊","🍞","💧","🛡️","🕊️","🌈","📣","🔥","💡"];
+
+// ─── STATE
+let txs=[], proj={name:"Fondo Solidario Terremoto",desc:"Transparencia total · Cada donación visible",goal:0,usdRate:1.08,banner:"Ayuda a las víctimas del terremoto. Cada euro cuenta."};
+let design={logo:"🏚️",acc:"#f59e0b",h1:"#0f1f33",h2:"#1e3a6e",bg:"#fdf8f2",about:"",footer:"",iban:"",tit:"",biz:"",pp:"",con:"",em:"",wa:"",sBan:true,sProg:true,sAb:false,sDon:true,sImp:true,sCha:true,sTx:true};
+let bChart=null,pChart=null;
+
+// ─── UTILS
+const f2=n=>new Intl.NumberFormat("es-ES",{minimumFractionDigits:2,maximumFractionDigits:2}).format(Number(n)||0);
+const fE=n=>f2(n)+" €";
+function fUSD(eur){return"$"+new Intl.NumberFormat("en-US",{maximumFractionDigits:0}).format(Math.round(Number(eur)*(proj.usdRate||1.08)));}
+const fD=d=>{try{return new Date(d+"T12:00:00").toLocaleDateString("es-ES",{day:"2-digit",month:"short",year:"numeric"});}catch(e){return d;}};
+const td=()=>new Date().toISOString().split("T")[0];
+const esc=s=>(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+
+// ─── STORAGE
+function save(){try{localStorage.setItem("fs_d",JSON.stringify({txs,proj,design}));}catch(e){}}
+function load(){try{const d=JSON.parse(localStorage.getItem("fs_d")||"{}");if(d.txs)txs=d.txs;if(d.proj)proj={...proj,...d.proj};if(d.design)design={...design,...d.design};}catch(e){}try{const p=localStorage.getItem("fs_pwd");if(p&&p.length>=4)PASS=p;}catch(e){}}
+
+// ─── LOGIN
+let passVisible=false;
+function toggleShowPass(){passVisible=!passVisible;document.getElementById("showPassLabel").textContent=passVisible?PASS:"••••";}
+function doLogin(){
+  const v=document.getElementById("loginInput").value;
+  const err=document.getElementById("loginErr");
+  if(v===PASS){
+    document.getElementById("loginScreen").style.display="none";
+    document.getElementById("app").style.display="block";
+    document.getElementById("toolbar").style.display="block";
+    start();
+  }else{
+    err.style.display="block";
+    document.getElementById("loginInput").value="";
+    setTimeout(()=>err.style.display="none",4000);
+  }
+}
+document.getElementById("loginInput").addEventListener("keydown",e=>{if(e.key==="Enter")doLogin();});
+function doLogout(){if(confirm("¿Cerrar sesión?")){window.location.reload();}}
+
+// ─── START
+function start(){load();applyDesignToAdmin();applyProjText();renderAll();initEmoGrid();loadDesignUI();}
+
+function applyProjText(){
+  document.getElementById("hname").textContent=proj.name;
+  document.getElementById("hsub").textContent=proj.desc;
+  document.getElementById("bannerTxt").textContent=proj.banner||"";
+  document.getElementById("hico").textContent=design.logo;
+  document.getElementById("footerEl").textContent=design.footer||"Datos verificados por el equipo coordinador";
+}
+
+// ─── TABS
+function goTab(tab){
+  document.querySelectorAll(".view").forEach(v=>v.classList.remove("on"));
+  document.querySelectorAll(".ntab").forEach(b=>b.classList.remove("on"));
+  document.getElementById("v-"+tab).classList.add("on");
+  document.querySelectorAll(".ntab").forEach(b=>{if(b.getAttribute("onclick")===`goTab('${tab}')`)b.classList.add("on");});
+  if(tab==="dash")renderAll();
+  if(tab==="txs")renderTxList();
+  if(tab==="docs")renderDocs();
+  if(tab==="design"){loadDesignUI();livePreview();}
+  if(tab==="pub"){}
+}
+
+// ─── RENDER
+function renderAll(){renderCards();renderImpact();renderCharts();renderRecent();}
+
+function renderCards(){
+  const inc=txs.filter(t=>t.type==="income").reduce((s,t)=>s+Number(t.amount),0);
+  const exp=txs.filter(t=>t.type==="expense").reduce((s,t)=>s+Number(t.amount),0);
+  const bal=inc-exp;
+  document.getElementById("cards").innerHTML=
+    `<div class="card-s" style="border-left-color:#10b981"><div class="card-icon">💚</div><div class="card-lbl">Total Recaudado</div><div class="card-val" style="color:#059669">${fE(inc)}</div><div style="font-size:13px;font-weight:700;color:#34d399;margin-top:2px">≈ ${fUSD(inc)}</div><div class="card-sub">De donantes como tú</div></div>
+     <div class="card-s" style="border-left-color:${design.acc}"><div class="card-icon">🤝</div><div class="card-lbl">Ayuda Distribuida</div><div class="card-val" style="color:${design.acc}">${fE(exp)}</div><div style="font-size:13px;font-weight:700;color:${design.acc};margin-top:2px;opacity:.8">≈ ${fUSD(exp)}</div><div class="card-sub">En suministros y apoyo</div></div>
+     <div class="card-s" style="border-left-color:#0891b2"><div class="card-icon">🏦</div><div class="card-lbl">Saldo Disponible</div><div class="card-val" style="color:${bal>=0?"#0891b2":"#dc2626"}">${fE(bal)}</div><div style="font-size:13px;font-weight:700;color:${bal>=0?"#0891b2":"#dc2626"};margin-top:2px;opacity:.8">≈ ${fUSD(bal)}</div><div class="card-sub">Listo para distribuir</div></div>
+     <div class="card-s" style="border-left-color:#7c3aed"><div class="card-icon">📋</div><div class="card-lbl">Movimientos</div><div class="card-val" style="color:#7c3aed">${txs.length}</div><div style="font-size:12px;color:#9ca3af;margin-top:2px">1 € = $${(proj.usdRate||1.08).toFixed(2)}</div><div class="card-sub">Tasa configurada</div></div>`;
+  const pc=document.getElementById("progCard");
+  if(proj.goal>0){pc.style.display="block";const p=Math.min((inc/proj.goal)*100,100);document.getElementById("progFill").style.width=p+"%";document.getElementById("progPct").textContent=Math.round(p)+"%";document.getElementById("pInc").textContent=fE(inc);document.getElementById("pGoal").textContent=fE(proj.goal);document.getElementById("pRem").textContent=fE(Math.max(0,proj.goal-inc));}else pc.style.display="none";
+}
+
+function renderImpact(){
+  const exp=txs.filter(t=>t.type==="expense"),tot=exp.reduce((s,t)=>s+Number(t.amount),0);
+  const ig=document.getElementById("igrid"),ni=document.getElementById("noImpact");
+  if(!tot){ni.style.display="block";ig.innerHTML="";return;}
+  ni.style.display="none";
+  ig.innerHTML=IMPS.map(g=>{const gT=exp.filter(t=>g.cats.includes(t.category)).reduce((s,t)=>s+Number(t.amount),0);if(!gT)return"";const p=Math.round(gT/tot*100);return`<div class="ic" style="border-top-color:${g.cl}"><span class="ic-em">${g.ic}</span><div class="ic-val" style="color:${g.cl}">${fE(gT)}</div><div class="ic-lbl">${g.lb}</div><div class="ic-pct">${p}% del total</div><div class="ic-bar"><div class="ic-bar-f" style="width:${p}%;background:${g.cl}"></div></div></div>`;}).filter(Boolean).join("");
+}
+
+function renderCharts(){
+  const mm={};txs.forEach(t=>{const m=t.date.substring(0,7);if(!mm[m])mm[m]={m,D:0,A:0};if(t.type==="income")mm[m].D+=Number(t.amount);else mm[m].A+=Number(t.amount);});
+  const md=Object.values(mm).sort((a,b)=>a.m<b.m?-1:1).slice(-6);
+  const bw=document.getElementById("barCard");
+  if(md.length){bw.style.display="block";if(bChart)bChart.destroy();bChart=new Chart(document.getElementById("barChart").getContext("2d"),{type:"bar",data:{labels:md.map(d=>new Date(d.m+"-15").toLocaleDateString("es-ES",{month:"short",year:"2-digit"})),datasets:[{label:"Donaciones",data:md.map(d=>d.D),backgroundColor:"#10b981",borderRadius:5},{label:"Ayuda dist.",data:md.map(d=>d.A),backgroundColor:design.acc,borderRadius:5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{font:{size:11}}}},scales:{x:{ticks:{font:{size:11}}},y:{ticks:{font:{size:11},callback:v=>v+"€"}}}}});}else bw.style.display="none";
+  const pd=IMPS.map(g=>({lb:g.lb,v:txs.filter(t=>t.type==="expense"&&g.cats.includes(t.category)).reduce((s,t)=>s+Number(t.amount),0),cl:g.cl})).filter(d=>d.v>0);
+  const pw=document.getElementById("pieCard");
+  if(pd.length){pw.style.display="block";if(pChart)pChart.destroy();pChart=new Chart(document.getElementById("pieChart").getContext("2d"),{type:"doughnut",data:{labels:pd.map(d=>d.lb),datasets:[{data:pd.map(d=>d.v),backgroundColor:pd.map(d=>d.cl),borderWidth:2,borderColor:"#fff"}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"right",labels:{font:{size:11},padding:8,boxWidth:12}},tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${fE(ctx.raw)}`}}}}});}else pw.style.display="none";
+}
+
+function txHTML(t,showDel=true){
+  const isIn=t.type==="income";const del=showDel?`<button class="tx-del" onclick="delTx('${t.id}')">✕</button>`:"";const ben=t.ben?` · 👥 ${esc(t.ben)}`:"";
+  return`<div class="tx-item"><div class="tx-icon" style="background:${isIn?"#ecfdf5":"#fffbeb"}">${isIn?"📥":"📤"}</div><div class="tx-body"><div class="tx-name">${esc(t.desc)}</div><div class="tx-meta">${fD(t.date)}${t.cat?`<span class="tx-badge">${esc(t.cat)}</span>`:""}${ben}${t.notes?` · ${esc(t.notes)}`:""}</div></div><div class="tx-right"><div class="tx-amt" style="color:${isIn?"#059669":design.acc}">${isIn?"+":"-"}${fE(t.amount)}</div><div class="tx-type">${isIn?"Donación":"Ayuda dist."}</div></div>${del}</div>`;
+}
+
+function renderRecent(){const el=document.getElementById("recentList");el.innerHTML=txs.length?txs.slice(0,6).map(t=>txHTML(t)).join(""):`<div class="empty"><div class="eico">🙏</div><p>Añade tu primer movimiento con el botón +</p></div>`;}
+
+function renderTxList(){
+  const ft=document.getElementById("filterType").value,fce=document.getElementById("filterCat"),fcv=fce.value;
+  const cats=[...new Set(txs.map(t=>t.cat).filter(Boolean))].sort();
+  fce.innerHTML='<option value="all">Todas las categorías</option>'+cats.map(c=>`<option ${c===fcv?"selected":""} value="${esc(c)}">${esc(c)}</option>`).join("");
+  const fil=txs.filter(t=>{if(ft!=="all"&&t.type!==ft)return false;if(fcv!=="all"&&(t.cat||"")!==fcv)return false;return true;});
+  const s=document.getElementById("txSum");
+  if(ft!=="all"||fcv!=="all"){s.style.display="block";const tot=fil.reduce((a,t)=>a+Number(t.amount),0);s.innerHTML=`<strong>${fil.length}</strong> resultados · Total: <strong style="color:${ft==="income"?"#059669":design.acc}">${fE(tot)}</strong>`;}else s.style.display="none";
+  document.getElementById("txList").innerHTML=fil.length?fil.map(t=>txHTML(t)).join(""):`<div class="empty"><div class="eico">🔍</div><p>Sin resultados</p></div>`;
+}
+
+function renderDocs(){
+  const wn=txs.filter(t=>t.notes&&t.notes.trim());
+  document.getElementById("docList").innerHTML=wn.length?wn.map(t=>`<div class="doc-item"><span style="font-size:20px">${t.type==="income"?"📥":"📤"}</span><div style="flex:1;min-width:0"><div style="font-weight:700;font-size:14px">${esc(t.desc)}</div><div style="font-size:12px;color:#9ca3af">${fD(t.date)} ${t.cat?`· ${esc(t.cat)}`:""} ${t.ben?`· 👥 ${esc(t.ben)}`:""}</div><div class="doc-note">📄 ${esc(t.notes)}</div></div><div style="font-weight:800;color:${t.type==="income"?"#059669":design.acc};flex-shrink:0">${t.type==="expense"?"-":"+"}${fE(t.amount)}</div></div>`).join(""):`<div class="empty"><div class="eico">📭</div><p>No hay justificantes aún</p></div>`;
+}
+
+// ─── TRANSACTIONS
+function openAddModal(pre){
+  document.getElementById("fDate").value=td();document.getElementById("fType").value="expense";
+  document.getElementById("fDesc").value="";document.getElementById("fAmt").value="";
+  document.getElementById("fBen").value="";document.getElementById("fNotes").value="";
+  const h=document.getElementById("aiHint");h.style.display="none";
+  if(pre){if(pre.date)document.getElementById("fDate").value=pre.date;if(pre.type)document.getElementById("fType").value=pre.type;if(pre.desc)document.getElementById("fDesc").value=pre.desc;if(pre.amount)document.getElementById("fAmt").value=pre.amount;if(pre.notes)document.getElementById("fNotes").value=pre.notes;if(pre.ben)document.getElementById("fBen").value=pre.ben;h.style.display="block";h.textContent="✅ Datos extraídos automáticamente. Revisa y ajusta.";}
+  updateCats(pre&&pre.cat);
+  document.getElementById("addModal").classList.add("on");
+  setTimeout(()=>document.getElementById("fDesc").focus(),60);
+}
+function updateCats(sel){
+  const ty=document.getElementById("fType").value;
+  document.getElementById("fCat").innerHTML='<option value="">Sin categoría</option>'+(ty==="income"?IC:EC).map(c=>`<option ${c===sel?"selected":""} value="${esc(c)}">${esc(c)}</option>`).join("");
+}
+function saveTx(){
+  const desc=document.getElementById("fDesc").value.trim(),amt=document.getElementById("fAmt").value,date=document.getElementById("fDate").value;
+  if(!desc||!amt||!date){alert("Completa los campos obligatorios (*)");return;}
+  txs.unshift({id:Date.now().toString(36)+Math.random().toString(36).slice(2),type:document.getElementById("fType").value,date,desc,amount:parseFloat(amt),cat:document.getElementById("fCat").value,ben:document.getElementById("fBen").value.trim(),notes:document.getElementById("fNotes").value.trim()});
+  save();closeModal("addModal");renderAll();if(document.getElementById("v-txs").classList.contains("on"))renderTxList();
+}
+function delTx(id){if(!confirm("¿Eliminar?"))return;txs=txs.filter(t=>t.id!==id);save();renderAll();if(document.getElementById("v-txs").classList.contains("on"))renderTxList();}
+
+function closeModal(id){document.getElementById(id).classList.remove("on");}
+document.querySelectorAll(".overlay").forEach(el=>el.addEventListener("click",e=>{if(e.target===el)el.classList.remove("on");}));
+
+// ─── DESIGN
+function dTab(tab){
+  document.querySelectorAll(".dtab").forEach(b=>b.classList.remove("on"));
+  document.querySelectorAll(".dpanel").forEach(p=>p.classList.remove("on"));
+  document.querySelector(`button[onclick="dTab('${tab}')"]`).classList.add("on");
+  document.getElementById("dp-"+tab).classList.add("on");
+}
+
+function initEmoGrid(){
+  document.getElementById("emoGrid").innerHTML=EMOJIS.map(e=>`<div class="emo ${design.logo===e?"on":""}" onclick="pickEmo('${e}')">${e}</div>`).join("");
+}
+
+function pickEmo(e){design.logo=e;document.querySelectorAll(".emo").forEach(d=>d.classList.toggle("on",d.textContent===e));livePreview();}
+
+function loadDesignUI(){
+  document.getElementById("dN").value=proj.name;
+  document.getElementById("dD").value=proj.desc;
+  document.getElementById("dBan").value=proj.banner;
+  document.getElementById("dAb").value=design.about;
+  document.getElementById("dFt").value=design.footer;
+  document.getElementById("cAcc").value=design.acc;
+  document.getElementById("cH1").value=design.h1;
+  document.getElementById("cH2").value=design.h2;
+  document.getElementById("cBg").value=design.bg;
+  document.getElementById("dIBAN").value=design.iban;
+  document.getElementById("dTit").value=design.tit;
+  document.getElementById("dBiz").value=design.biz;
+  document.getElementById("dPP").value=design.pp;
+  document.getElementById("dCon").value=design.con;
+  document.getElementById("dEm").value=design.em;
+  document.getElementById("dWA").value=design.wa;
+  ["sBan","sProg","sAb","sDon","sImp","sCha","sTx"].forEach(k=>{const el=document.getElementById(k);if(el)el.checked=design[k]!==false;});
+}
+
+function saveDesign(){
+  proj.name=document.getElementById("dN").value||proj.name;
+  proj.desc=document.getElementById("dD").value;
+  proj.banner=document.getElementById("dBan").value;
+  design.about=document.getElementById("dAb").value;
+  design.footer=document.getElementById("dFt").value;
+  design.acc=document.getElementById("cAcc").value||design.acc;
+  design.h1=document.getElementById("cH1").value||design.h1;
+  design.h2=document.getElementById("cH2").value||design.h2;
+  design.bg=document.getElementById("cBg").value||design.bg;
+  design.iban=document.getElementById("dIBAN").value;
+  design.tit=document.getElementById("dTit").value;
+  design.biz=document.getElementById("dBiz").value;
+  design.pp=document.getElementById("dPP").value;
+  design.con=document.getElementById("dCon").value;
+  design.em=document.getElementById("dEm").value;
+  design.wa=document.getElementById("dWA").value;
+  ["sBan","sProg","sAb","sDon","sImp","sCha","sTx"].forEach(k=>{design[k]=document.getElementById(k)?.checked??true;});
+  save();applyDesignToAdmin();applyProjText();
+  showStatus("✅ Diseño guardado. Ve a 🌐 Publicar para generar la página.","ok");
+}
+
+function resetDesign(){design={logo:"🏚️",acc:"#f59e0b",h1:"#0f1f33",h2:"#1e3a6e",bg:"#fdf8f2",about:"",footer:"",iban:"",tit:"",biz:"",pp:"",con:"",em:"",wa:"",sBan:true,sProg:true,sAb:false,sDon:true,sImp:true,sCha:true,sTx:true};save();loadDesignUI();applyDesignToAdmin();}
+
+function applyTheme(acc,h1,h2,bg){
+  design.acc=acc;design.h1=h1;design.h2=h2;design.bg=bg;
+  document.getElementById("cAcc").value=acc;document.getElementById("cH1").value=h1;document.getElementById("cH2").value=h2;document.getElementById("cBg").value=bg;
+  applyDesignToAdmin();livePreview();
+}
+
+function applyColors(){
+  design.acc=document.getElementById("cAcc").value||design.acc;
+  design.h1=document.getElementById("cH1").value||design.h1;
+  design.h2=document.getElementById("cH2").value||design.h2;
+  design.bg=document.getElementById("cBg").value||design.bg;
+  applyDesignToAdmin();livePreview();
+}
+
+function applyDesignToAdmin(){
+  const r=document.documentElement;
+  r.style.setProperty("--acc",design.acc);
+  document.body.style.background=design.bg;
+  const hdr=document.querySelector("header");if(hdr)hdr.style.background=`linear-gradient(135deg,${design.h1},${design.h2} 60%)`;
+  const ico=document.getElementById("hico");if(ico){ico.textContent=design.logo;ico.style.background=design.acc;}
+}
+
+function livePreview(){
+  const ph=document.getElementById("pHdr");if(ph)ph.style.background=`linear-gradient(135deg,${design.h1},${design.h2})`;
+  const pl=document.getElementById("pLogo");if(pl){pl.textContent=design.logo;pl.style.background=design.acc;}
+  const pt=document.getElementById("pTitle");if(pt)pt.textContent=document.getElementById("dN")?.value||proj.name;
+  const pb=document.getElementById("pBar");if(pb)pb.style.background=design.acc;
+  ["pC1","pC2","pC3","pC4"].forEach(id=>{const el=document.getElementById(id);if(el)el.style.borderLeftColor=design.acc;});
+  const ban=document.getElementById("pBan");if(ban)ban.style.display=document.getElementById("sBan")?.checked?"block":"none";
+  const inc=txs.filter(t=>t.type==="income").reduce((s,t)=>s+Number(t.amount),0);
+  const exp=txs.filter(t=>t.type==="expense").reduce((s,t)=>s+Number(t.amount),0);
+  const pvI=document.getElementById("pInc2");if(pvI)pvI.textContent=fE(inc);
+  const pvE=document.getElementById("pExp2");if(pvE)pvE.textContent=fE(exp);
+  const pvB=document.getElementById("pBal2");if(pvB){pvB.textContent=fE(inc-exp);pvB.style.color=(inc-exp)>=0?"#0891b2":"#dc2626";}
+  const pvC=document.getElementById("pCnt2");if(pvC)pvC.textContent=txs.length;
+  const pDon=document.getElementById("pDon"),pDI=document.getElementById("pDonItems");
+  const biz=document.getElementById("dBiz")?.value||design.biz;
+  const iban=document.getElementById("dIBAN")?.value||design.iban;
+  if(pDon&&pDI&&document.getElementById("sDon")?.checked&&(biz||iban)){
+    pDon.style.display="block";let h="";
+    if(iban)h+=`<div style="font-size:11px;font-weight:600;color:white;margin-bottom:4px">🏦 ${iban}</div>`;
+    if(biz)h+=`<div style="font-size:13px;font-weight:900;color:#fbbf24">📱 Bizum: ${biz}</div>`;
+    pDI.innerHTML=h;
+  }else if(pDon)pDon.style.display="none";
+}
+
+
+// ─── SETTINGS
+function openSettings(){
+  document.getElementById("sName").value=proj.name;
+  document.getElementById("sDesc").value=proj.desc;
+  document.getElementById("sGoal").value=proj.goal||0;
+  document.getElementById("sRate").value=proj.usdRate||1.08;
+  document.getElementById("sBanner").value=proj.banner||"";
+  document.getElementById("sPwd").value="";
+  document.getElementById("settingsModal").classList.add("on");
+}
+function saveSettings(){
+  proj.name=document.getElementById("sName").value||proj.name;
+  proj.desc=document.getElementById("sDesc").value;
+  proj.goal=Number(document.getElementById("sGoal").value)||0;
+  proj.usdRate=Number(document.getElementById("sRate").value)||1.08;
+  proj.banner=document.getElementById("sBanner").value;
+  const np=document.getElementById("sPwd").value;
+  if(np&&np.length>=4){PASS=np;try{localStorage.setItem("fs_pwd",np);}catch(e){}}
+  save();applyProjText();renderAll();
+  closeModal("settingsModal");
+  showStatus("✅ Ajustes guardados. Recuerda generar y subir la página pública.","ok");
+}
+
+// ─── STATUS
+function showStatus(msg,type){const el=document.getElementById("status");el.textContent=msg;el.className=type;el.style.display=msg?"block":"none";if(type==="ok")setTimeout(()=>el.style.display="none",4000);}
+
+// ─── CSV EXPORT
+function exportCSV(){
+  const h="Fecha,Descripción,Importe,Tipo,Categoría,Personas,Notas";
+  const rows=txs.map(t=>`${t.date},"${(t.desc||"").replace(/"/g,'""')}",${t.amount},${t.type},"${(t.cat||"").replace(/"/g,'""')}","${(t.ben||"").replace(/"/g,'""')}","${(t.notes||"").replace(/"/g,'""')}"`).join("\n");
+  dl(new Blob([h+"\n"+rows],{type:"text/csv;charset=utf-8;"}),proj.name.replace(/[^a-z0-9]/gi,"_")+".csv");
+}
+
+// ─── AI FILE UPLOAD
+async function handleFile(e){
+  const file=e.target.files[0];if(!file)return;
+  const btn=document.getElementById("aiBtn");btn.textContent="⏳...";btn.disabled=true;
+  const dzt=document.getElementById("dzt");if(dzt)dzt.textContent="⏳ La IA está analizando...";
+  showStatus("🤖 Analizando con IA...","info");
+  try{
+    let messages;
+    if(file.type.startsWith("image/")){
+      const b64=await toB64(file);
+      messages=[{role:"user",content:[{type:"image",source:{type:"base64",media_type:file.type,data:b64}},{type:"text",text:`Eres asistente contable. Analiza este recibo. Devuelve SOLO JSON sin markdown:\n{"date":"YYYY-MM-DD","desc":"concepto","amount":0.00,"type":"expense","cat":"","notes":"","ben":""}\nCategorías: ${EC.join(", ")}`}]}];
+    }else{
+      const txt=await toTxt(file);
+      messages=[{role:"user",content:`Eres asistente contable. Analiza este CSV. Devuelve SOLO JSON array sin markdown:\n[{"date":"YYYY-MM-DD","desc":"","amount":0,"type":"income|expense","cat":"","notes":"","ben":""}]\nGastos: ${EC.join(", ")}\nIngresos: ${IC.join(", ")}\nCSV:\n${txt.substring(0,5000)}`}];
+    }
+    const resp=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-6",max_tokens:1500,messages})});
+    const data=await resp.json();
+    const raw=data.content.map(i=>i.text||"").join("");
+    const parsed=JSON.parse(raw.replace(/```json|```/g,"").trim());
+    if(Array.isArray(parsed)){for(const t of parsed)txs.unshift({...t,id:Date.now().toString(36)+Math.random().toString(36).slice(2),amount:Number(t.amount)});save();renderAll();showStatus(`✅ ${parsed.length} transacciones importadas.`,"ok");}
+    else{showStatus("✅ Datos extraídos. Revisa el formulario.","ok");openAddModal(parsed);}
+  }catch(err){showStatus("❌ No se pudo procesar. Introduce manualmente.","err");console.error(err);}
+  finally{btn.textContent="📎 Subir (IA)";btn.disabled=false;if(dzt)dzt.textContent="Subir recibo, factura o CSV";e.target.value="";}
+}
+
+// ─── GENERATE PUBLIC PAGE
+function generatePage(){
+  const d=design;
+  const donHTML=(d.sDon!==false&&(d.iban||d.biz||d.pp||d.em))?`
+<div style="background:linear-gradient(135deg,${d.h1},${d.h2});border-radius:14px;padding:22px;margin-bottom:14px">
+  <div style="font-size:11px;font-weight:800;color:rgba(255,255,255,.65);text-transform:uppercase;letter-spacing:.07em;margin-bottom:16px">💳 Cómo donar</div>
+  ${d.iban?`<div style="display:flex;gap:14px;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.12);align-items:center"><div style="width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0">🏦</div><div><div style="font-size:11px;color:rgba(255,255,255,.6)">IBAN${d.tit?" · "+d.tit:""}</div><div style="font-size:15px;font-weight:700;color:white;word-break:break-all">${d.iban}</div>${d.con?`<div style="font-size:11px;color:rgba(255,255,255,.5)">Concepto: ${d.con}</div>`:""}</div></div>`:""}
+  ${d.biz?`<div style="display:flex;gap:14px;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.12);align-items:center"><div style="width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0">📱</div><div><div style="font-size:11px;color:rgba(255,255,255,.6)">Bizum</div><div style="font-size:24px;font-weight:900;color:white">${d.biz}</div>${d.con?`<div style="font-size:11px;color:rgba(255,255,255,.5)">Concepto: ${d.con}</div>`:""}</div></div>`:""}
+  ${d.pp?`<div style="display:flex;gap:14px;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.12);align-items:center"><div style="width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0">💳</div><div><div style="font-size:11px;color:rgba(255,255,255,.6)">PayPal</div><div style="font-size:15px;font-weight:700;color:white">${d.pp}</div></div></div>`:""}
+  ${d.em?`<div style="display:flex;gap:14px;padding:12px 0${d.wa?";border-bottom:1px solid rgba(255,255,255,.12)":""};align-items:center"><div style="width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0">✉️</div><div><div style="font-size:11px;color:rgba(255,255,255,.6)">Email</div><div style="font-size:15px;font-weight:700;color:white">${d.em}</div></div></div>`:""}
+  ${d.wa?`<div style="display:flex;gap:14px;padding:12px 0;align-items:center"><div style="width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0">💬</div><div><div style="font-size:11px;color:rgba(255,255,255,.6)">WhatsApp</div><div style="font-size:24px;font-weight:900;color:white">${d.wa}</div></div></div>`:""}
+</div>`:"";
+  const aboutHTML=(d.sAb!==false&&d.about)?`<div style="background:#fff;border-radius:14px;padding:20px;box-shadow:0 2px 10px rgba(0,0,0,.07);margin-bottom:14px"><div style="font-size:11px;font-weight:800;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;margin-bottom:13px">📖 Sobre nosotros</div><p style="font-size:14px;color:#374151;line-height:1.7">${d.about.replace(/\n/g,"<br>")}</p></div>`:"";
+  const fecha=new Date().toLocaleDateString("es-ES",{day:"2-digit",month:"long",year:"numeric"});
+  const impJSON=JSON.stringify(IMPS.map(g=>({ic:g.ic,lb:g.lb,cl:g.cl,cats:g.cats})));
+  const dataJSON=JSON.stringify({txs,proj,design:d});
+
+  const html=`<!DOCTYPE html>
+<html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc(proj.name)} — Transparencia</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"><\/script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}body{font-family:system-ui,sans-serif;background:${d.bg};color:#1f2937;font-size:14px;min-height:100vh}
+#bn{background:linear-gradient(90deg,#7f1d1d,#991b1b);color:#fff;text-align:center;padding:9px;font-size:13px;font-weight:700;display:${d.sBan!==false?"block":"none"}}
+header{background:linear-gradient(135deg,${d.h1},${d.h2} 60%);color:#fff;padding:0 18px;box-shadow:0 3px 20px rgba(0,0,0,.25)}
+.hi{max-width:1080px;margin:0 auto;height:58px;display:flex;align-items:center;gap:10px}
+.lic{width:36px;height:36px;background:${d.acc};border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+main{max-width:1080px;margin:0 auto;padding:18px}
+.card{background:#fff;border-radius:14px;padding:20px;box-shadow:0 2px 10px rgba(0,0,0,.07);margin-bottom:14px}
+.ct{font-size:11px;font-weight:800;color:#6b7280;text-transform:uppercase;letter-spacing:.07em;margin-bottom:13px}
+#sg{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:12px;margin-bottom:14px}
+.sc{background:#fff;border-radius:14px;padding:18px 20px;box-shadow:0 2px 10px rgba(0,0,0,.07);border-left:4px solid}
+.sl{font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px}
+.sv2{font-size:22px;font-weight:900;letter-spacing:-.5px}.ss{font-size:11px;color:#9ca3af;margin-top:3px}
+.prog{height:20px;background:#e5e7eb;border-radius:100px;overflow:hidden}.progf{height:100%;background:linear-gradient(90deg,#10b981,${d.acc});border-radius:100px}
+#ig{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+.ic{border-radius:12px;padding:14px;text-align:center;border:1px solid #f3f4f6;background:#fff;border-top:4px solid;box-shadow:0 2px 8px rgba(0,0,0,.05)}.ie{font-size:26px;margin-bottom:5px;display:block}.ia{font-size:14px;font-weight:900;margin-bottom:2px}.il{font-size:11px;font-weight:700;color:#4b5563}.ip{font-size:10px;color:#9ca3af;margin-top:2px}.ib{height:4px;background:#f3f4f6;border-radius:4px;margin-top:5px;overflow:hidden}.ibf{height:100%;border-radius:4px}
+#cr{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.tx{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid #f5f0e8}.tx:last-child{border-bottom:none}
+.ti{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.tb{flex:1;min-width:0}.tn{font-weight:700;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.tm{font-size:11px;color:#9ca3af;margin-top:2px}
+.tbg{display:inline-block;background:#f3f4f6;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:600;color:#6b7280;margin-left:4px}
+.tr{text-align:right;flex-shrink:0}.ta{font-weight:800;font-size:14px}.tl{font-size:10px;color:#9ca3af}
+.empty{text-align:center;padding:40px;color:#9ca3af}
+footer{text-align:center;padding:24px;font-size:12px;color:#9ca3af;border-top:1px solid #f3f4f6;margin-top:10px}
+@media(max-width:600px){#cr{grid-template-columns:1fr}#ig{grid-template-columns:repeat(2,1fr)}#sg{grid-template-columns:1fr 1fr}}
+</style></head><body>
+<div id="bn">🚨 EMERGENCIA ACTIVA · ${esc(proj.banner||"")}</div>
+<header><div class="hi"><div class="lic">${d.logo}</div><div><div style="font-size:15px;font-weight:800">${esc(proj.name)}</div><div style="font-size:11px;opacity:.65">${esc(proj.desc)}</div></div></div></header>
+<main>
+${aboutHTML}
+${donHTML}
+<div id="sg"></div>
+<div class="card" id="pc" style="display:none"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:6px"><span style="font-weight:800">🎯 Objetivo de recaudación</span><span id="pp" style="font-weight:900;color:${d.acc}">0%</span></div><div class="prog"><div class="progf" id="pf" style="width:0%"></div></div><div style="margin-top:8px;font-size:12px;color:#9ca3af;display:flex;gap:14px;flex-wrap:wrap"><span>Recaudado:<strong id="pi"> -</strong></span><span>Objetivo:<strong id="pg"> -</strong></span><span>Restante:<strong id="pr"> -</strong></span></div></div>
+<div class="card" style="display:${d.sImp!==false?"block":"none"}"><div class="ct">❤️ En qué se ha invertido vuestra ayuda</div><div id="ni" class="empty" style="padding:20px"><p>Sin distribución aún</p></div><div id="ig"></div></div>
+<div id="cr" style="display:${d.sCha!==false?"grid":"none"}"><div class="card" id="bw"><div class="ct">📈 Evolución mensual</div><canvas id="bc" height="190"></canvas></div><div class="card" id="pw"><div class="ct">🍩 Distribución</div><canvas id="pc2" height="190"></canvas></div></div>
+<div class="card" style="display:${d.sTx!==false?"block":"none"}"><div class="ct">📋 Todos los movimientos</div><div id="tl"></div></div>
+</main>
+<footer>${d.footer||"Datos actualizados el "+fecha+" · Transparencia total verificada · Tasa de cambio: 1 € = $"+(d.usdRate||1.08).toFixed(2)}</footer>
+<script>
+const D=${dataJSON},IMP=${impJSON};
+const f2=n=>new Intl.NumberFormat("es-ES",{minimumFractionDigits:2,maximumFractionDigits:2}).format(Number(n)||0);
+const fE=n=>f2(n)+" €";
+function fUSD(eur){return"$"+new Intl.NumberFormat("en-US",{maximumFractionDigits:0}).format(Math.round(Number(eur)*(proj.usdRate||1.08)));}const fD=d=>{try{return new Date(d+"T12:00:00").toLocaleDateString("es-ES",{day:"2-digit",month:"short",year:"numeric"});}catch(e){return d;}};
+const esc=s=>(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+const txs=D.txs,proj=D.proj,d=D.design;
+function init(){
+  const inc=txs.filter(t=>t.type==="income").reduce((s,t)=>s+Number(t.amount),0);
+  const exp=txs.filter(t=>t.type==="expense").reduce((s,t)=>s+Number(t.amount),0);const bal=inc-exp;
+  const rate=proj.usdRate||1.08;
+  const toUSD=n=>"$"+new Intl.NumberFormat("en-US",{maximumFractionDigits:0}).format(Math.round(Number(n)*rate));
+  document.getElementById("sg").innerHTML='<div class="sc" style="border-left-color:#10b981"><div style="font-size:20px;margin-bottom:5px">💚</div><div class="sl">Total Recaudado</div><div class="sv2" style="color:#059669">'+fE(inc)+'</div><div style="font-size:13px;font-weight:700;color:#34d399;margin-top:2px">≈ '+toUSD(inc)+'</div><div class="ss">De donantes como tú</div></div><div class="sc" style="border-left-color:${d.acc}"><div style="font-size:20px;margin-bottom:5px">🤝</div><div class="sl">Ayuda Distribuida</div><div class="sv2" style="color:${d.acc}">'+fE(exp)+'</div><div style="font-size:13px;font-weight:700;color:${d.acc};margin-top:2px;opacity:.85">≈ '+toUSD(exp)+'</div><div class="ss">En suministros y apoyo</div></div><div class="sc" style="border-left-color:#0891b2"><div style="font-size:20px;margin-bottom:5px">🏦</div><div class="sl">Saldo Disponible</div><div class="sv2" style="color:'+(bal>=0?"#0891b2":"#dc2626")+'">'+fE(bal)+'</div><div style="font-size:13px;font-weight:700;color:'+(bal>=0?"#0891b2":"#dc2626")+';margin-top:2px;opacity:.85">≈ '+toUSD(bal)+'</div><div class="ss">Listo para distribuir</div></div><div class="sc" style="border-left-color:#7c3aed"><div style="font-size:20px;margin-bottom:5px">📋</div><div class="sl">Movimientos</div><div class="sv2" style="color:#7c3aed">'+txs.length+'</div><div style="font-size:11px;color:#9ca3af;margin-top:2px">1 € = $'+rate.toFixed(2)+'</div></div>';
+  if(proj.goal>0){const pc=document.getElementById("pc");pc.style.display="block";const p=Math.min((inc/proj.goal)*100,100);document.getElementById("pf").style.width=p+"%";document.getElementById("pp").textContent=Math.round(p)+"%";document.getElementById("pi").textContent=" "+fE(inc);document.getElementById("pg").textContent=" "+fE(proj.goal);document.getElementById("pr").textContent=" "+fE(Math.max(0,proj.goal-inc));}
+  const exps=txs.filter(t=>t.type==="expense"),totE=exps.reduce((s,t)=>s+Number(t.amount),0);
+  const ig=document.getElementById("ig"),ni=document.getElementById("ni");
+  if(totE>0&&ni){ni.style.display="none";ig.innerHTML=IMP.map(g=>{const gT=exps.filter(t=>g.cats.includes(t.category||t.cat)).reduce((s,t)=>s+Number(t.amount),0);if(!gT)return"";const p=Math.round(gT/totE*100);return'<div class="ic" style="border-top-color:'+g.cl+'"><span class="ie">'+g.ic+'</span><div class="ia" style="color:'+g.cl+'">'+fE(gT)+'</div><div class="il">'+g.lb+'</div><div class="ip">'+p+'%</div><div class="ib"><div class="ibf" style="width:'+p+'%;background:'+g.cl+'"></div></div></div>';}).filter(Boolean).join("");}
+  const mm={};txs.forEach(t=>{const m=t.date.substring(0,7);if(!mm[m])mm[m]={m,D:0,A:0};if(t.type==="income")mm[m].D+=Number(t.amount);else mm[m].A+=Number(t.amount);});
+  const md=Object.values(mm).sort((a,b)=>a.m<b.m?-1:1).slice(-6);
+  if(md.length){new Chart(document.getElementById("bc").getContext("2d"),{type:"bar",data:{labels:md.map(x=>new Date(x.m+"-15").toLocaleDateString("es-ES",{month:"short",year:"2-digit"})),datasets:[{label:"Donaciones",data:md.map(x=>x.D),backgroundColor:"#10b981",borderRadius:5},{label:"Ayuda",data:md.map(x=>x.A),backgroundColor:"${d.acc}",borderRadius:5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{font:{size:11}}}},scales:{x:{ticks:{font:{size:11}}},y:{ticks:{font:{size:11},callback:v=>v+"€"}}}}});}else if(document.getElementById("bw"))document.getElementById("bw").style.display="none";
+  const pd=IMP.map(g=>({lb:g.lb,v:exps.filter(t=>g.cats.includes(t.category||t.cat)).reduce((s,t)=>s+Number(t.amount),0),cl:g.cl})).filter(x=>x.v>0);
+  if(pd.length){new Chart(document.getElementById("pc2").getContext("2d"),{type:"doughnut",data:{labels:pd.map(x=>x.lb),datasets:[{data:pd.map(x=>x.v),backgroundColor:pd.map(x=>x.cl),borderWidth:2,borderColor:"#fff"}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:"right",labels:{font:{size:11},padding:8,boxWidth:12}},tooltip:{callbacks:{label:ctx=>ctx.label+": "+fE(ctx.raw)}}}}});}else if(document.getElementById("pw"))document.getElementById("pw").style.display="none";
+  document.getElementById("tl").innerHTML=txs.length?txs.map(t=>{const isIn=t.type==="income";const nm=t.desc||t.description||"";const cat=t.cat||t.category||"";const ben=t.ben||t.beneficiaries||"";const notes=t.notes||"";return'<div class="tx"><div class="ti" style="background:'+(isIn?"#ecfdf5":"#fffbeb")+'">'+(isIn?"📥":"📤")+'</div><div class="tb"><div class="tn">'+esc(nm)+'</div><div class="tm">'+fD(t.date)+(cat?'<span class="tbg">'+esc(cat)+'</span>':'')+(ben?' · 👥 '+esc(ben):'')+(notes?' · '+esc(notes):'')+'</div></div><div class="tr"><div class="ta" style="color:'+(isIn?"#059669":"${d.acc}")+'">'+(isIn?"+":"-")+fE(t.amount)+'</div><div class="tl">'+(isIn?"Donación":"Ayuda")+'</div></div></div>';}).join(""):'<div class="empty"><p>Sin movimientos registrados</p></div>';
+}
+init();
+<\/script>
+<!-- MODAL AJUSTES -->
+<div class="overlay" id="settingsModal">
+  <div class="modal">
+    <button class="mcls" onclick="closeModal('settingsModal')">✕</button>
+    <h2>⚙️ Ajustes del proyecto</h2>
+    <div class="field"><label>Nombre del proyecto</label><input id="sName"/></div>
+    <div class="field"><label>Descripción corta</label><input id="sDesc"/></div>
+    <div class="field"><label>🎯 Objetivo de recaudación (€) <small style="font-weight:400;color:#9ca3af">— 0 para desactivar la barra</small></label><input type="number" id="sGoal" min="0" step="100" placeholder="Ej: 5000"/></div>
+    <div class="field" style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:14px">
+      <label>💱 Tipo de cambio EUR → USD</label>
+      <div style="font-size:12px;color:#92400e;margin-bottom:8px">Ej: si 1€ = $1,08 → escribe 1.08</div>
+      <input type="number" id="sRate" min="0.01" step="0.01" placeholder="1.08"/>
+      <div style="font-size:11px;color:#9ca3af;margin-top:6px">Este valor se muestra en la página pública como referencia</div>
+    </div>
+    <div class="field"><label>🚨 Texto del banner de emergencia</label><input id="sBanner"/></div>
+    <hr style="border:none;border-top:1px solid #e5e7eb;margin:14px 0"/>
+    <div class="field"><label>🔐 Nueva contraseña de admin <small style="font-weight:400;color:#9ca3af">(mín. 4 caracteres — vacío = no cambiar)</small></label><input type="password" id="sPwd" placeholder="••••"/></div>
+    <div class="mrow">
+      <button class="mbtn" style="background:#0f1f33;flex:2" onclick="saveSettings()">💾 Guardar ajustes</button>
+      <button class="mcan" onclick="closeModal('settingsModal')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+</body></html>`;
+
+  dl(new Blob([html],{type:"text/html;charset=utf-8"}),"fondo_solidario.html");
+  showStatus("✅ Página generada. Sube el archivo fondo_solidario.html a Netlify, Glitch o GitHub Pages.","ok");
+}
+
+// ─── HELPERS
+function dl(blob,name){const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=name;a.click();URL.revokeObjectURL(url);}
+const toB64=f=>new Promise((r,j)=>{const rd=new FileReader();rd.onload=()=>r(rd.result.split(",")[1]);rd.onerror=j;rd.readAsDataURL(f);});
+const toTxt=f=>new Promise((r,j)=>{const rd=new FileReader();rd.onload=()=>r(rd.result);rd.onerror=j;rd.readAsText(f,"UTF-8");});
+</script>
+
+<!-- MODAL AJUSTES -->
+<div class="overlay" id="settingsModal">
+  <div class="modal">
+    <button class="mcls" onclick="closeModal('settingsModal')">✕</button>
+    <h2>⚙️ Ajustes del proyecto</h2>
+    <div class="field"><label>Nombre del proyecto</label><input id="sName"/></div>
+    <div class="field"><label>Descripción corta</label><input id="sDesc"/></div>
+    <div class="field"><label>🎯 Objetivo de recaudación (€) <small style="font-weight:400;color:#9ca3af">— 0 para desactivar la barra</small></label><input type="number" id="sGoal" min="0" step="100" placeholder="Ej: 5000"/></div>
+    <div class="field" style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:14px">
+      <label>💱 Tipo de cambio EUR → USD</label>
+      <div style="font-size:12px;color:#92400e;margin-bottom:8px">Ej: si 1€ = $1,08 → escribe 1.08</div>
+      <input type="number" id="sRate" min="0.01" step="0.01" placeholder="1.08"/>
+      <div style="font-size:11px;color:#9ca3af;margin-top:6px">Este valor se muestra en la página pública como referencia</div>
+    </div>
+    <div class="field"><label>🚨 Texto del banner de emergencia</label><input id="sBanner"/></div>
+    <hr style="border:none;border-top:1px solid #e5e7eb;margin:14px 0"/>
+    <div class="field"><label>🔐 Nueva contraseña de admin <small style="font-weight:400;color:#9ca3af">(mín. 4 caracteres — vacío = no cambiar)</small></label><input type="password" id="sPwd" placeholder="••••"/></div>
+    <div class="mrow">
+      <button class="mbtn" style="background:#0f1f33;flex:2" onclick="saveSettings()">💾 Guardar ajustes</button>
+      <button class="mcan" onclick="closeModal('settingsModal')">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
