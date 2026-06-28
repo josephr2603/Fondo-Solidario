@@ -9,21 +9,6 @@
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:system-ui,-apple-system,sans-serif;background:#fdf8f2;color:#1f2937;font-size:15px;min-height:100vh}
 
-/* ── PANTALLA DE LOGIN ── */
-#loginScreen{position:fixed;inset:0;background:#0f1f33;display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px}
-.login-box{background:#1a2e4a;border-radius:20px;padding:32px 28px;width:100%;max-width:360px;text-align:center}
-.login-box h2{color:white;font-size:22px;font-weight:900;margin-bottom:6px}
-.login-box p{color:#9ca3af;font-size:14px;margin-bottom:24px;line-height:1.5}
-.pass-hint{background:rgba(245,158,11,.15);border:1px solid rgba(245,158,11,.4);border-radius:10px;padding:12px;margin-bottom:18px}
-.pass-hint p{color:#fbbf24;font-size:13px;margin:0}
-.pass-hint strong{font-size:20px;letter-spacing:4px;display:block;margin-top:4px;color:white}
-.login-inp{width:100%;padding:14px;border-radius:10px;border:2px solid #283d5e;background:#0f1f33;color:white;font-size:18px;text-align:center;letter-spacing:4px;margin-bottom:12px;outline:none}
-.login-inp:focus{border-color:#f59e0b}
-.login-btn{width:100%;padding:14px;background:#f59e0b;color:#0f1f33;border:none;border-radius:10px;font-size:16px;font-weight:900;cursor:pointer}
-.login-btn:hover{background:#d97706}
-.login-err{background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:10px;color:#dc2626;font-size:13px;font-weight:700;margin-top:12px;display:none}
-.show-pass{background:none;border:none;color:#6b7280;font-size:12px;cursor:pointer;margin-top:8px;text-decoration:underline;display:block;width:100%;text-align:center}
-
 /* ── APP ── */
 #app{display:none}
 
@@ -195,25 +180,8 @@ footer{text-align:center;padding:24px;font-size:12px;color:#9ca3af;border-top:1p
 </head>
 <body>
 
-<!-- ═══ LOGIN ═══ -->
-<div id="loginScreen">
-  <div class="login-box">
-    <div style="font-size:48px;margin-bottom:12px">🏚️</div>
-    <h2>Fondo Solidario</h2>
-    <p>Acceso exclusivo para administradores</p>
-    <div class="pass-hint">
-      <p>Tu contraseña de acceso:</p>
-      <strong id="showPassLabel">••••</strong>
-    </div>
-    <input class="login-inp" type="password" id="loginInput" placeholder="Escribe aquí" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
-    <button class="login-btn" onclick="doLogin()">Entrar →</button>
-    <div class="login-err" id="loginErr">❌ Contraseña incorrecta. Mira arriba.</div>
-    <button class="show-pass" onclick="toggleShowPass()">👁 Mostrar / ocultar contraseña</button>
-  </div>
-</div>
-
 <!-- ═══ APP ═══ -->
-<div id="app">
+<div id="app" style="display:block">
   <div id="banner">🚨 EMERGENCIA ACTIVA · <span id="bannerTxt">Ayuda a las víctimas del terremoto. Cada euro cuenta.</span></div>
   <header>
     <div class="hinner">
@@ -224,10 +192,11 @@ footer{text-align:center;padding:24px;font-size:12px;color:#9ca3af;border-top:1p
       <div class="hnav">
         <button class="ntab on" onclick="goTab('dash')">📊 Inicio</button>
         <button class="ntab" onclick="goTab('txs')">📋 Registro</button>
-        <button class="ntab" onclick="goTab('docs')">📁 Docs</button>
-        <button class="ntab" onclick="goTab('design')">🎨 Diseño</button>
-        <button class="ntab" onclick="goTab('pub')">🌐 Publicar</button>
-        <button class="admin-btn" onclick="doLogout()">Salir</button>
+        <button class="ntab" onclick="goTab('nosotros')">📖 Sobre nosotros</button>
+        <button class="ntab" onclick="goTab('donar')">💳 Cómo donar</button>
+        <button class="ntab" id="tabDesign" style="display:none" onclick="goTab('design')">🎨 Diseño</button>
+        <button class="ntab" id="tabPub" style="display:none" onclick="goTab('pub')">🌐 Publicar</button>
+        <button class="admin-btn" id="adminBtn" onclick="togAdmin()">🔐</button>
       </div>
     </div>
   </header>
@@ -247,6 +216,31 @@ footer{text-align:center;padding:24px;font-size:12px;color:#9ca3af;border-top:1p
       </div>
     </div>
     <div id="status"></div>
+
+
+    <!-- SOBRE NOSOTROS -->
+    <div id="v-nosotros" class="view">
+      <div class="card">
+        <div class="ctit">📖 Sobre nosotros</div>
+        <div id="aboutContent" style="font-size:15px;color:#374151;line-height:1.8"></div>
+        <div id="aboutEmpty" style="text-align:center;padding:30px;color:#9ca3af;display:none">
+          <div style="font-size:36px;margin-bottom:10px">📝</div>
+          <p>El equipo coordinador aún no ha añadido información.<br>Vuelve pronto.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- CÓMO DONAR -->
+    <div id="v-donar" class="view">
+      <div class="card">
+        <div class="ctit">💳 Cómo donar</div>
+        <div id="donateContent"></div>
+        <div id="donateEmpty" style="text-align:center;padding:30px;color:#9ca3af;display:none">
+          <div style="font-size:36px;margin-bottom:10px">💬</div>
+          <p>El equipo coordinador añadirá pronto los datos de pago.<br>Para más información contacta directamente.</p>
+        </div>
+      </div>
+    </div>
 
     <!-- INICIO -->
     <div id="v-dash" class="view on">
@@ -437,6 +431,24 @@ footer{text-align:center;padding:24px;font-size:12px;color:#9ca3af;border-top:1p
   <footer id="footerEl">Datos verificados por el equipo coordinador · Transparencia total</footer>
 </div>
 
+<!-- MODAL LOGIN ADMIN -->
+<div class="overlay" id="loginModal">
+  <div class="modal" style="max-width:360px;text-align:center">
+    <button class="mcls" onclick="closeModal('loginModal')">✕</button>
+    <div style="font-size:42px;margin-bottom:10px">🔐</div>
+    <h2 style="margin-bottom:6px">Acceso Admin</h2>
+    <p style="font-size:13px;color:#9ca3af;margin-bottom:20px">Solo para coordinadores autorizados</p>
+    <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:10px;margin-bottom:16px">
+      <p style="font-size:12px;color:#92400e;margin-bottom:4px">Contraseña:</p>
+      <strong style="font-size:20px;letter-spacing:4px" id="showPassLabel">••••</strong>
+    </div>
+    <input class="field" style="width:100%;padding:12px;border-radius:8px;border:2px solid #e5e7eb;font-size:18px;text-align:center;letter-spacing:4px;outline:none;margin-bottom:10px" type="password" id="loginInput" placeholder="••••" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+    <div class="login-err" id="loginErr" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:8px;font-size:13px;font-weight:700;color:#dc2626;margin-bottom:10px">❌ Contraseña incorrecta</div>
+    <button style="width:100%;padding:12px;background:#f59e0b;color:#0f1f33;border:none;border-radius:10px;font-size:16px;font-weight:900;cursor:pointer;margin-bottom:8px" onclick="doLogin()">Entrar →</button>
+    <button style="background:none;border:none;color:#9ca3af;font-size:12px;cursor:pointer;text-decoration:underline" onclick="toggleShowPass()">Mostrar / ocultar contraseña</button>
+  </div>
+</div>
+
 <!-- MODAL AÑADIR -->
 <div class="overlay" id="addModal">
   <div class="modal">
@@ -509,21 +521,46 @@ function doLogin(){
   const v=document.getElementById("loginInput").value;
   const err=document.getElementById("loginErr");
   if(v===PASS){
-    document.getElementById("loginScreen").style.display="none";
-    document.getElementById("app").style.display="block";
-    document.getElementById("toolbar").style.display="block";
-    start();
+    isAdmin=true;
+    closeModal('loginModal');
+    document.getElementById("loginInput").value="";
+    showAdminUI();
   }else{
     err.style.display="block";
     document.getElementById("loginInput").value="";
     setTimeout(()=>err.style.display="none",4000);
   }
 }
-document.getElementById("loginInput").addEventListener("keydown",e=>{if(e.key==="Enter")doLogin();});
-function doLogout(){if(confirm("¿Cerrar sesión?")){window.location.reload();}}
+function showAdminUI(){
+  document.getElementById("toolbar").style.display="block";
+  document.getElementById("tabDesign").style.display="";
+  document.getElementById("tabPub").style.display="";
+  document.getElementById("adminBtn").textContent="✕ Salir";
+}
+function hideAdminUI(){
+  document.getElementById("toolbar").style.display="none";
+  document.getElementById("tabDesign").style.display="none";
+  document.getElementById("tabPub").style.display="none";
+  document.getElementById("adminBtn").textContent="🔐";
+  goTab('dash');
+}
+document.addEventListener('DOMContentLoaded',()=>{
+  const li=document.getElementById("loginInput");
+  if(li)li.addEventListener("keydown",e=>{if(e.key==="Enter")doLogin();});
+});
+function doLogout(){isAdmin=false;hideAdminUI();}
 
 // ─── START
-function start(){load();applyDesignToAdmin();applyProjText();renderAll();initEmoGrid();loadDesignUI();}
+function start(){
+  load();
+  applyDesignToAdmin();
+  applyProjText();
+  renderAll();
+  renderAboutTab();
+  renderDonateTab();
+  initEmoGrid();
+  loadDesignUI();
+}
 
 function applyProjText(){
   document.getElementById("hname").textContent=proj.name;
@@ -531,6 +568,12 @@ function applyProjText(){
   document.getElementById("bannerTxt").textContent=proj.banner||"";
   document.getElementById("hico").textContent=design.logo;
   document.getElementById("footerEl").textContent=design.footer||"Datos verificados por el equipo coordinador";
+}
+
+// ─── ADMIN TOGGLE
+function togAdmin(){
+  if(isAdmin){doLogout();}
+  else{document.getElementById("loginModal").classList.add("on");setTimeout(()=>document.getElementById("loginInput").focus(),50);}
 }
 
 // ─── TABS
@@ -542,8 +585,9 @@ function goTab(tab){
   if(tab==="dash")renderAll();
   if(tab==="txs")renderTxList();
   if(tab==="docs")renderDocs();
+  if(tab==="nosotros")renderAboutTab();
+  if(tab==="donar")renderDonateTab();
   if(tab==="design"){loadDesignUI();livePreview();}
-  if(tab==="pub"){}
 }
 
 // ─── RENDER
@@ -756,6 +800,44 @@ function saveSettings(){
   showStatus("✅ Ajustes guardados. Recuerda generar y subir la página pública.","ok");
 }
 
+
+// ─── SOBRE NOSOTROS + CÓMO DONAR
+function renderAboutTab(){
+  const ac=document.getElementById("aboutContent");
+  const ae=document.getElementById("aboutEmpty");
+  if(!ac)return;
+  if(design.about&&design.about.trim()){
+    ac.innerHTML=design.about.replace(/\n/g,"<br>");
+    ac.style.display="block";
+    if(ae)ae.style.display="none";
+  }else{
+    ac.style.display="none";
+    if(ae)ae.style.display="block";
+  }
+}
+function renderDonateTab(){
+  const dc=document.getElementById("donateContent");
+  const de=document.getElementById("donateEmpty");
+  if(!dc)return;
+  const d=design;
+  const hasDon=d.iban||d.biz||d.pp||d.em||d.wa;
+  if(hasDon){
+    let h=`<div style="background:linear-gradient(135deg,${d.h1||"#0f1f33"},${d.h2||"#1e3a6e"});border-radius:12px;padding:20px;color:white">`;
+    if(d.biz)h+=`<div style="display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid rgba(255,255,255,.12)"><div style="width:44px;height:44px;border-radius:12px;background:rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">📱</div><div><div style="font-size:12px;color:rgba(255,255,255,.6);margin-bottom:4px">Bizum</div><div style="font-size:28px;font-weight:900;letter-spacing:1px">${esc(d.biz)}</div>${d.con?`<div style="font-size:12px;color:rgba(255,255,255,.5);margin-top:4px">Concepto: ${esc(d.con)}</div>`:""}</div></div>`;
+    if(d.iban)h+=`<div style="display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid rgba(255,255,255,.12)"><div style="width:44px;height:44px;border-radius:12px;background:rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">🏦</div><div><div style="font-size:12px;color:rgba(255,255,255,.6);margin-bottom:4px">Cuenta bancaria${d.tit?" — "+esc(d.tit):""}</div><div style="font-size:16px;font-weight:700;word-break:break-all">${esc(d.iban)}</div>${d.con?`<div style="font-size:12px;color:rgba(255,255,255,.5);margin-top:4px">Concepto: ${esc(d.con)}</div>`:""}</div></div>`;
+    if(d.pp)h+=`<div style="display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid rgba(255,255,255,.12)"><div style="width:44px;height:44px;border-radius:12px;background:rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">💳</div><div><div style="font-size:12px;color:rgba(255,255,255,.6);margin-bottom:4px">PayPal</div><div style="font-size:16px;font-weight:700">${esc(d.pp)}</div></div></div>`;
+    if(d.wa)h+=`<div style="display:flex;align-items:center;gap:14px;padding:14px 0${d.em?";border-bottom:1px solid rgba(255,255,255,.12)":""}"><div style="width:44px;height:44px;border-radius:12px;background:rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">💬</div><div><div style="font-size:12px;color:rgba(255,255,255,.6);margin-bottom:4px">WhatsApp</div><div style="font-size:28px;font-weight:900">${esc(d.wa)}</div></div></div>`;
+    if(d.em)h+=`<div style="display:flex;align-items:center;gap:14px;padding:14px 0"><div style="width:44px;height:44px;border-radius:12px;background:rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">✉️</div><div><div style="font-size:12px;color:rgba(255,255,255,.6);margin-bottom:4px">Email</div><div style="font-size:16px;font-weight:700">${esc(d.em)}</div></div></div>`;
+    h+="</div>";
+    dc.innerHTML=h;
+    dc.style.display="block";
+    if(de)de.style.display="none";
+  }else{
+    dc.style.display="none";
+    if(de)de.style.display="block";
+  }
+}
+
 // ─── STATUS
 function showStatus(msg,type){const el=document.getElementById("status");el.textContent=msg;el.className=type;el.style.display=msg?"block":"none";if(type==="ok")setTimeout(()=>el.style.display="none",4000);}
 
@@ -910,6 +992,7 @@ init();
 function dl(blob,name){const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=name;a.click();URL.revokeObjectURL(url);}
 const toB64=f=>new Promise((r,j)=>{const rd=new FileReader();rd.onload=()=>r(rd.result.split(",")[1]);rd.onerror=j;rd.readAsDataURL(f);});
 const toTxt=f=>new Promise((r,j)=>{const rd=new FileReader();rd.onload=()=>r(rd.result);rd.onerror=j;rd.readAsText(f,"UTF-8");});
+start();
 </script>
 
 <!-- MODAL AJUSTES -->
