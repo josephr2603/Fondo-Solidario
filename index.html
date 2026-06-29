@@ -322,6 +322,7 @@ footer{text-align:center;padding:24px;font-size:12px;color:var(--ink3);border-to
     <button style="position:absolute;top:16px;right:16px;background:rgba(255,255,255,.15);border:none;color:white;width:40px;height:40px;border-radius:50%;font-size:20px;cursor:pointer;z-index:1" onclick="closeLightbox()">✕</button>
     <div style="max-width:min(100%,800px);width:100%;text-align:center" onclick="event.stopPropagation()">
       <img id="lbImg" src="" alt="" style="max-width:100%;max-height:72vh;border-radius:14px;object-fit:contain;display:none;box-shadow:0 8px 40px rgba(0,0,0,.5)"/>
+      <video id="lbVideoEl" src="" controls playsinline style="max-width:100%;max-height:72vh;border-radius:14px;display:none;background:#000;box-shadow:0 8px 40px rgba(0,0,0,.5)"></video>
       <div id="lbVideo" style="display:none;width:100%;aspect-ratio:16/9">
         <iframe id="lbFrame" src="" allowfullscreen style="width:100%;height:100%;border-radius:14px;border:none"></iframe>
       </div>
@@ -720,21 +721,30 @@ function openGalleryUpload(){
   const pp=document.getElementById("photoPreview");if(pp)pp.style.display="none";
   const up=document.getElementById("galleryUploadProgress");if(up)up.style.display="none";
   const pb=document.getElementById("galleryProgressBar");if(pb)pb.style.width="0%";
+  const vfi=document.getElementById('videoFileInput');if(vfi)vfi.value='';
+  const vprev=document.getElementById('videoPreviewSection');if(vprev)vprev.style.display='none';
   setMediaType('photo');
   document.getElementById("galleryModal").classList.add("on");
 }
 
 function setMediaType(type){
   currentMediaType=type;
-  const isPhoto=type==='photo';
-  const ps=document.getElementById("photoUploadSection");
-  const vs=document.getElementById("videoUploadSection");
-  const tp=document.getElementById("typePhoto");
-  const tv=document.getElementById("typeVideo");
-  if(ps)ps.style.display=isPhoto?"block":"none";
-  if(vs)vs.style.display=isPhoto?"none":"block";
-  if(tp){tp.style.background=isPhoto?"var(--navy)":"var(--bg)";tp.style.color=isPhoto?"white":"var(--ink2)";tp.style.border=isPhoto?"none":"1px solid var(--bdr)";}
-  if(tv){tv.style.background=!isPhoto?"var(--navy)":"var(--bg)";tv.style.color=!isPhoto?"white":"var(--ink2)";tv.style.border=!isPhoto?"none":"1px solid var(--bdr)";}
+  ["typePhoto","typeVideoDirect","typeVideoLink"].forEach(function(id){
+    const el=document.getElementById(id);
+    if(!el)return;
+    const active=
+      (id==="typePhoto"&&type==="photo")||
+      (id==="typeVideoDirect"&&type==="video-direct")||
+      (id==="typeVideoLink"&&type==="video");
+    el.style.background=active?"var(--navy)":"var(--bg)";
+    el.style.color=active?"white":"var(--ink2)";
+    el.style.border=active?"none":"1px solid var(--bdr)";
+  });
+  const sections={"photo":"photoUploadSection","video-direct":"videoDirectSection","video":"videoLinkSection"};
+  Object.keys(sections).forEach(function(k){
+    const el=document.getElementById(sections[k]);
+    if(el)el.style.display=k===type?"block":"none";
+  });
 }
 
 function openCameraCapture(){
@@ -778,6 +788,24 @@ function handleDrop(e){
   inp.dispatchEvent(ev);
 }
 
+
+function previewVideoFile(e){
+  const file=e.target.files[0];if(!file)return;
+  const vp=document.getElementById("videoPreviewSection");
+  const vel=document.getElementById("videoPreviewEl");
+  const vfi=document.getElementById("videoFileInfo");
+  if(vel){
+    const url=URL.createObjectURL(file);
+    vel.src=url;
+    vel.onloadedmetadata=function(){
+      const dur=Math.round(vel.duration);
+      const mins=Math.floor(dur/60);const secs=dur%60;
+      const sizeMB=(file.size/1024/1024).toFixed(1);
+      if(vfi)vfi.textContent=sizeMB+"MB · "+mins+"min "+secs+"s · "+file.name;
+    };
+  }
+  if(vp)vp.style.display="block";
+}
 
 function previewPhoto(e){
   const file=e.target.files[0];if(!file)return;
@@ -877,7 +905,42 @@ async function submitGalleryItem(){
       item.thumb=item.url;
       if(bar)bar.style.width="100%";
       if(txt)txt.textContent="Subida completa";
+    }else if(currentMediaType==="video-direct"){
+      // Direct video upload to Firebase Storage
+      const vInput=document.getElementById("videoFileInput");
+      if(!vInput||!vInput.files[0]){alert("Selecciona un archivo de vídeo");btn.disabled=false;btn.textContent="Publicar";return;}
+      const vFile=vInput.files[0];
+      const maxSize=300*1024*1024; // 300MB limit
+      if(vFile.size>maxSize){
+        showStatus("El vídeo supera los 300MB. Graba en calidad estándar o córtalo en partes.","err");
+        btn.disabled=false;btn.textContent="Publicar";return;
+      }
+      if(!fbStorage){initStorage();}
+      if(!fbStorage){showStatus("Firebase Storage no está activo","err");btn.disabled=false;btn.textContent="Publicar";return;}
+      const progress=document.getElementById("galleryUploadProgress");
+      const bar=document.getElementById("galleryProgressBar");
+      const txt=document.getElementById("galleryProgressText");
+      if(progress)progress.style.display="block";
+      if(txt)txt.textContent="Subiendo vídeo... (puede tardar unos minutos)";
+      item.type="video-direct";
+      const ext=vFile.name.split(".").pop().toLowerCase()||"mp4";
+      const ref=fbStorage.ref("gallery/videos/"+item.id+"."+ext);
+      const uploadTask=ref.put(vFile,{contentType:vFile.type||"video/mp4"});
+      await new Promise((resolve,reject)=>{
+        uploadTask.on("state_changed",
+          snap=>{
+            const pct=Math.round(snap.bytesTransferred/snap.totalBytes*100);
+            if(bar)bar.style.width=pct+"%";
+            if(txt)txt.textContent="Subiendo vídeo... "+pct+"% ("+Math.round(snap.bytesTransferred/1024/1024)+"MB / "+Math.round(snap.totalBytes/1024/1024)+"MB)";
+          },reject,resolve);
+      });
+      item.url=await ref.getDownloadURL();
+      item.thumb="";
+      item.embedUrl="";
+      if(bar)bar.style.width="100%";
+      if(txt)txt.textContent="✅ Vídeo subido";
     }else{
+      // YouTube / external link
       const videoUrl=(document.getElementById("videoUrl")||{value:""}).value.trim();
       if(!videoUrl){alert("Pega el enlace del video");btn.disabled=false;btn.textContent="Publicar";return;}
       item.url=videoUrl;
@@ -912,30 +975,45 @@ function renderGallery(){
     return;
   }
   if(empty)empty.style.display="none";
-  const cards=galleryItems.map(function(item,idx){
-    const thumb=item.thumb||(item.type==="video"?getVideoThumb(item.url):"");
-    const isVid=item.type==="video";
+
+  // Sort by date ascending (oldest first = muestra progreso)
+  const sorted=[...galleryItems].sort(function(a,b){
+    const da=a.date||"0000-00-00";
+    const db=b.date||"0000-00-00";
+    return da<db?-1:da>db?1:0;
+  });
+  // Keep original index for openLightbox (uses galleryItems index)
+  const cards=sorted.map(function(item){
+    const realIdx=galleryItems.findIndex(function(g){return g.id===item.id;});
+    const isVidDirect=item.type==="video-direct";
+    const isVidYT=item.type==="video";
+    const isAnyVid=isVidDirect||isVidYT;
+    const thumb=item.thumb||(isVidYT?getVideoThumb(item.url):"");
     const bg=thumb
       ?"linear-gradient(rgba(0,0,0,0) 30%,rgba(0,0,0,.7)),url('"+thumb+"') center/cover no-repeat"
-      :"linear-gradient(135deg,var(--navy),var(--navy2))";
-    const playHtml=isVid
+      :"linear-gradient(135deg,#0E1F35,#1A3252)";
+    const playHtml=isAnyVid
       ?"<div style='position:absolute;top:50%;left:50%;transform:translate(-50%,-58%)'><div style='width:52px;height:52px;background:rgba(255,255,255,.9);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 4px 20px rgba(0,0,0,.3)'>▶️</div></div>"
+      :"";
+    const vidIcon=isVidDirect?"🎬 Vídeo":isVidYT?"▶️ YouTube":"";
+    const typeHtml=isAnyVid
+      ?"<div style='position:absolute;top:10px;right:10px;background:#EA580C;color:white;font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px'>"+vidIcon+"</div>"
       :"";
     const dateHtml=item.date
       ?"<div style='position:absolute;top:10px;left:10px;background:rgba(0,0,0,.55);color:white;font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px'>"+fD(item.date)+"</div>"
-      :"";
-    const typeHtml=isVid
-      ?"<div style='position:absolute;top:10px;right:10px;background:#EA580C;color:white;font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px'>🎥 Video</div>"
       :"";
     const benHtml=item.ben
       ?"<div style='font-size:11px;color:rgba(255,255,255,.8);margin-top:3px'>👥 "+esc(item.ben)+"</div>"
       :"";
     const titleHtml="<div style='color:white;font-size:13px;font-weight:700;line-height:1.3;text-shadow:0 1px 4px rgba(0,0,0,.5)'>"+esc(item.title)+"</div>";
+    const noThumbOverlay=(!thumb&&isVidDirect)
+      ?"<div style='position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px'><div style='font-size:44px'>🎬</div><div style='color:rgba(255,255,255,.7);font-size:11px;font-weight:600'>Vídeo</div></div>"
+      :"";
     const card=document.createElement("div");
     card.className="gcard";
     card.setAttribute("style","cursor:pointer;border-radius:14px;overflow:hidden;aspect-ratio:4/3;background:"+bg+";position:relative;box-shadow:0 4px 20px rgba(0,0,0,.12);transition:transform .2s,box-shadow .2s");
-    card.setAttribute("onclick","openLightbox("+idx+")");
-    card.innerHTML=dateHtml+typeHtml+playHtml+"<div style='position:absolute;bottom:0;left:0;right:0;padding:12px 14px'>"+titleHtml+benHtml+"</div>";
+    card.setAttribute("onclick","openLightbox("+realIdx+")");
+    card.innerHTML=noThumbOverlay+dateHtml+typeHtml+playHtml+"<div style='position:absolute;bottom:0;left:0;right:0;padding:12px 14px'>"+titleHtml+benHtml+"</div>";
     return card.outerHTML;
   });
   grid.innerHTML=cards.join("");
@@ -948,20 +1026,36 @@ function openLightbox(idx){
   const lbImg=document.getElementById("lbImg");
   const lbVideo=document.getElementById("lbVideo");
   const lbFrame=document.getElementById("lbFrame");
+  const lbVideoEl=document.getElementById("lbVideoEl");
+
+  // Hide all
+  if(lbImg)lbImg.style.display="none";
+  if(lbVideo)lbVideo.style.display="none";
+  if(lbVideoEl)lbVideoEl.style.display="none";
+  if(lbFrame)lbFrame.src="";
+
   if(item.type==="photo"){
     if(lbImg){lbImg.src=item.url;lbImg.style.display="block";}
-    if(lbVideo)lbVideo.style.display="none";
-  }else{
-    if(lbImg)lbImg.style.display="none";
-    if(lbVideo)lbVideo.style.display="block";
+  }else if(item.type==="video-direct"){
+    // Direct video file from Firebase Storage
+    if(lbVideoEl){
+      lbVideoEl.src=item.url;
+      lbVideoEl.style.display="block";
+      lbVideoEl.load();
+    }
+  }else if(item.type==="video"){
+    // YouTube embed
     const embed=item.embedUrl||getVideoEmbed(item.url);
-    if(embed&&lbFrame)lbFrame.src=embed;
-    else{window.open(item.url,"_blank");return;}
+    if(embed&&lbFrame&&lbVideo){
+      lbFrame.src=embed+"?autoplay=1";
+      lbVideo.style.display="block";
+    }else{window.open(item.url,"_blank");return;}
   }
-  const s=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
-  s("lbCaption",item.title||"");
-  s("lbDate",item.date?(fD(item.date)+(item.ben?" · "+item.ben:"")):"");
-  s("lbDesc",item.desc||"");
+
+  const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  set("lbCaption",item.title||"");
+  set("lbDate",item.date?(fD(item.date)+(item.ben?" · 👥 "+item.ben:"")):"");
+  set("lbDesc",item.desc||"");
   const del=document.getElementById("lbDeleteBtn");
   if(del)del.style.display=isAdmin?"block":"none";
   if(lb)lb.style.display="flex";
@@ -971,6 +1065,7 @@ function openLightbox(idx){
 function closeLightbox(){
   const lb=document.getElementById("lightbox");if(lb)lb.style.display="none";
   const lbFrame=document.getElementById("lbFrame");if(lbFrame)lbFrame.src="";
+  const lbVideoEl=document.getElementById("lbVideoEl");if(lbVideoEl){lbVideoEl.pause();lbVideoEl.src="";}
   document.body.style.overflow="";
   currentLbId=null;
 }
@@ -979,8 +1074,14 @@ async function deleteGalleryItem(){
   if(!currentLbId||!confirm("Eliminar esta imagen/video?"))return;
   try{
     const item=galleryItems.find(g=>g.id===currentLbId);
-    if(item&&item.type==="photo"&&fbStorage){
-      try{await fbStorage.ref("gallery/"+item.id+".jpg").delete();}catch(e){}
+    if(item&&fbStorage){
+      try{
+        if(item.type==="photo")await fbStorage.ref("gallery/"+item.id+".jpg").delete();
+        else if(item.type==="video-direct"){
+          const ext=item.url.match(/gallery\/videos\/[^.]+\.(\w+)\?/);
+          if(ext)await fbStorage.ref("gallery/videos/"+item.id+"."+ext[1]).delete();
+        }
+      }catch(ex){}
     }
     galleryItems=galleryItems.filter(g=>g.id!==currentLbId);
     await fbDb.ref("/gallery").set(galleryItems.length?galleryItems:null);
@@ -1271,9 +1372,10 @@ init();
       📱 <b>Desde el móvil:</b> puedes hacer una foto en ese momento o elegir una de tu galería.
     </div>
 
-    <div style="display:flex;gap:8px;margin-bottom:16px">
-      <button id="typePhoto" class="mbtn" style="background:var(--navy);flex:1" onclick="setMediaType('photo')">📷 Foto</button>
-      <button id="typeVideo" class="mbtn" style="background:var(--bg);color:var(--ink2);border:1px solid var(--bdr);flex:1" onclick="setMediaType('video')">🎥 Vídeo</button>
+    <div style="display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap">
+      <button id="typePhoto" class="mbtn" style="background:var(--navy);flex:1;min-width:90px" onclick="setMediaType('photo')">📷 Foto</button>
+      <button id="typeVideoDirect" class="mbtn" style="background:var(--bg);color:var(--ink2);border:1px solid var(--bdr);flex:1;min-width:90px" onclick="setMediaType('video-direct')">🎬 Vídeo directo</button>
+      <button id="typeVideoLink" class="mbtn" style="background:var(--bg);color:var(--ink2);border:1px solid var(--bdr);flex:1;min-width:90px" onclick="setMediaType('video')">▶️ YouTube</button>
     </div>
 
     <div id="photoUploadSection">
@@ -1294,13 +1396,31 @@ init();
       </div>
     </div>
 
-    <div id="videoUploadSection" style="display:none">
+    <!-- SECCIÓN: Vídeo directo -->
+    <div id="videoDirectSection" style="display:none">
+      <div style="background:#F0FDF4;border:1px solid #86EFAC;border-radius:10px;padding:12px;margin-bottom:12px;font-size:13px;color:#166534;line-height:1.6">
+        📱 <b>Desde el móvil:</b> elige cualquier vídeo de tu galería (MP4, MOV...). <b>Máximo 300MB.</b> Los vídeos cortos (1-3 min) van mejor. Se suben directamente a Firebase.
+      </div>
+      <div id="videoPreviewSection" style="display:none;margin-bottom:12px">
+        <video id="videoPreviewEl" controls playsinline style="width:100%;border-radius:10px;max-height:200px;background:#000"></video>
+        <div id="videoFileInfo" style="font-size:12px;color:var(--ink3);margin-top:6px;text-align:center"></div>
+      </div>
+      <label style="display:block;border:2px dashed var(--bdr);border-radius:12px;padding:20px;text-align:center;cursor:pointer;background:var(--bg)" onclick="document.getElementById('videoFileInput').click()">
+        <div style="font-size:36px;margin-bottom:8px">🎬</div>
+        <div style="font-weight:700;color:var(--navy);margin-bottom:4px">Toca para elegir vídeo</div>
+        <div style="font-size:12px;color:var(--ink3)">MP4 · MOV · AVI — máx. 300 MB</div>
+        <input type="file" id="videoFileInput" accept="video/mp4,video/quicktime,video/x-msvideo,video/avi,video/*" style="display:none" onchange="previewVideoFile(event)"/>
+      </label>
+    </div>
+
+    <!-- SECCIÓN: Enlace YouTube -->
+    <div id="videoLinkSection" style="display:none">
       <div class="f" style="margin-top:4px">
-        <label>Enlace del vídeo <small style="font-weight:400;color:var(--ink3)">YouTube, Instagram, TikTok, Facebook...</small></label>
+        <label>Enlace de YouTube <small style="font-weight:400;color:var(--ink3)">Pega el enlace del vídeo</small></label>
         <input id="videoUrl" type="url" placeholder="https://youtube.com/watch?v=..."/>
       </div>
       <div style="background:#EFF6FF;border:1px solid #BFDBFE;border-radius:9px;padding:11px;font-size:13px;color:#1E40AF;line-height:1.6;margin-top:-4px">
-        💡 Sube el vídeo a YouTube (puede ser privado o no listado) y pega el enlace aquí. Los vídeos pesados van mejor en YouTube que en Firebase.
+        💡 Sube el vídeo a YouTube (puede ser privado o no listado) y pega aquí el enlace. Ideal para vídeos largos o de alta calidad.
       </div>
     </div>
 
